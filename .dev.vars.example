@@ -1,0 +1,11 @@
+# OpenAI API Key (STT: Whisper, Embeddings, GPT-4)
+OPENAI_API_KEY=sk-...
+
+# ElevenLabs API Key (Voice Clone TTS)
+ELEVENLABS_API_KEY=...
+
+# D-ID API Key (Lip-sync Video)
+DID_API_KEY=...
+
+# Optional: Custom OpenAI endpoint
+# OPENAI_API_BASE=https://api.openai.com/v1
