@@ -3,10 +3,28 @@
   "name": "webapp",
   "compatibility_date": "2026-02-14",
   "pages_build_output_dir": "./dist",
-  "compatibility_flags": [
-    "nodejs_compat"
+  "compatibility_flags": ["nodejs_compat"],
+  
+  // Durable Objects for Realtime Agents
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "VOICE_CHAT_AGENT",
+        "class_name": "VoiceChatAgent",
+        "script_name": "webapp"
+      }
+    ]
+  },
+  
+  // Durable Objects migrations
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["VoiceChatAgent"]
+    }
   ],
-  // Note: After creating resources via CLI, update these IDs
+  
+  // Storage resources (IDs to be filled after creation)
   "r2_buckets": [
     {
       "binding": "R2",
@@ -17,7 +35,7 @@
     {
       "binding": "DB",
       "database_name": "webapp-production",
-      "database_id": "" // Will be filled after creation
+      "database_id": "" // Will be filled after: npx wrangler d1 create webapp-production
     }
   ],
   "vectorize": [

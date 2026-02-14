@@ -17,7 +17,8 @@
     "git:commit": "git add . && git commit -m"
   },
   "dependencies": {
-    "hono": "^4.11.9"
+    "hono": "^4.11.9",
+    "@cloudflare/realtime-agents": "latest"
   },
   "devDependencies": {
     "@hono/vite-build": "^1.2.0",

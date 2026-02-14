@@ -1,25 +1,28 @@
-# 音声チャットアプリ
+# 音声チャットアプリ（Realtime Voice AI）
 
 ## プロジェクト概要
 
-**名称**: 音声チャットアプリ（Voice Chat App）
+**名称**: 音声チャットアプリ（Voice Chat App with Cloudflare Realtime Agents）
 
-**目標**: RAG技術を活用した音声対話型AIアシスタント
+**目標**: RAG技術を活用したリアルタイム音声対話型AIアシスタント
 
 **主要機能**:
-- 🎤 音声入力（Speech-to-Text: OpenAI Whisper）
-- 📚 RAG（Retrieval-Augmented Generation: Cloudflare Vectorize）
-- 🤖 AI応答生成（GPT-4o-mini）
-- 🔊 音声出力（Text-to-Speech: ElevenLabs ボイスクローン対応）
-- 🎬 リップシンク動画（D-ID）
-- 📁 学習データ管理（PowerPoint、テキスト、PDF対応）
+- 🎤 **リアルタイム音声入力**（WebRTC + Deepgram STT on Workers AI）
+- 📚 **RAG検索**（Retrieval-Augmented Generation: Cloudflare Vectorize）
+- 🤖 **AI応答生成**（GPT-4o-mini with context）
+- 🔊 **音声出力**（ElevenLabs TTS ボイスクローン対応）
+- ⚡ **超低遅延**（<800ms レスポンス）
+- 📁 **学習データ管理**（PowerPoint、テキスト、PDF対応）
+- 🌍 **グローバルエッジ展開**（330拠点以上）
 
 ## 技術スタック
 
-### バックエンド
+### コア技術
+- **Cloudflare Realtime Agents SDK**: リアルタイム音声AIパイプライン
+- **RealtimeKit**: WebRTC接続管理
+- **Durable Objects**: ステートフル調整
 - **Hono**: 軽量高速なWebフレームワーク
 - **Cloudflare Workers**: エッジランタイム
-- **Cloudflare Pages**: デプロイメントプラットフォーム
 
 ### データストレージ
 - **Cloudflare D1**: SQLiteベースのデータベース（メタデータ管理）
@@ -27,9 +30,10 @@
 - **Cloudflare Vectorize**: ベクトルデータベース（RAG用）
 
 ### 外部APIサービス
-- **OpenAI API**: Whisper（STT）、Embeddings、GPT-4o-mini
+- **Deepgram on Workers AI**: STT/TTS（グローバル330拠点）
+- **OpenAI API**: Embeddings、GPT-4o-mini
 - **ElevenLabs API**: ボイスクローンTTS
-- **D-ID API**: リップシンク動画生成
+- **D-ID API**: リップシンク動画生成（オプション）
 
 ### フロントエンド
 - **Vanilla JavaScript**: シンプルな実装
@@ -55,22 +59,27 @@
 5. **voice_profiles**: 音声プロファイル（ElevenLabs）
    - id, name, voice_id, description, is_active
 
-### データフロー
+### データフロー（Realtime Agents Pipeline）
 
 ```
-1. ユーザー音声入力
-   ↓
-2. OpenAI Whisper (STT)
-   ↓
-3. テキスト化 → Cloudflare Vectorize でRAG検索
-   ↓
-4. 関連ドキュメント取得 → GPT-4で応答生成
-   ↓
-5. ElevenLabs (TTS) → 音声ファイル生成 → R2保存
-   ↓
-6. D-ID → リップシンク動画生成
-   ↓
-7. フロントエンドに返却（音声+動画）
+ユーザー（ブラウザ）
+   ↓ WebRTC
+RealtimeKit Transport
+   ↓ PCM Audio Stream
+Deepgram STT (Workers AI)
+   ↓ Transcript Text
+RAG Text Processor
+   ├─ Vectorize検索（関連ドキュメント）
+   ├─ OpenAI GPT-4（応答生成）
+   └─ 会話履歴管理（D1）
+   ↓ Response Text
+ElevenLabs TTS（ボイスクローン）
+   ↓ Audio Stream
+RealtimeKit Transport
+   ↓ WebRTC
+ユーザー（スピーカー出力）
+
+すべて800ms以内で完了
 ```
 
 ## セットアップ手順
@@ -89,9 +98,11 @@ Deploy タブで Cloudflare API キーを設定してください。
 
 以下のAPIキーを取得してください：
 
+- **Cloudflare Account ID & API Token**: https://dash.cloudflare.com/
+  - 必要な権限: `Realtime:Admin`, `D1:Edit`, `Vectorize:Edit`, `R2:Edit`
+- **Deepgram API Key**: https://deepgram.com/
 - **OpenAI API Key**: https://platform.openai.com/api-keys
 - **ElevenLabs API Key**: https://elevenlabs.io/
-- **D-ID API Key**: https://studio.d-id.com/
 
 ### 3. ローカル開発用環境変数
 
@@ -100,6 +111,13 @@ Deploy タブで Cloudflare API キーを設定してください。
 ```bash
 cp .dev.vars.example .dev.vars
 # .dev.vars を編集してAPIキーを入力
+
+# 必須項目:
+# - ACCOUNT_ID (Cloudflare)
+# - API_TOKEN (Cloudflare)
+# - DEEPGRAM_API_KEY
+# - OPENAI_API_KEY
+# - ELEVENLABS_API_KEY
 ```
 
 ### 4. Cloudflareリソースの作成

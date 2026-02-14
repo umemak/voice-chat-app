@@ -1,10 +1,17 @@
-# OpenAI API Key (STT: Whisper, Embeddings, GPT-4)
+# Cloudflare Account Settings (REQUIRED for Realtime Agents)
+ACCOUNT_ID=your-cloudflare-account-id
+API_TOKEN=your-cloudflare-api-token
+
+# OpenAI API Key (Embeddings, GPT-4)
 OPENAI_API_KEY=sk-...
+
+# Deepgram API Key (STT/TTS via Workers AI)
+DEEPGRAM_API_KEY=...
 
 # ElevenLabs API Key (Voice Clone TTS)
 ELEVENLABS_API_KEY=...
 
-# D-ID API Key (Lip-sync Video)
+# D-ID API Key (Lip-sync Video - Optional)
 DID_API_KEY=...
 
 # Optional: Custom OpenAI endpoint

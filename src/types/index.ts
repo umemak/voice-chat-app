@@ -3,9 +3,13 @@ export type Bindings = {
   DB: D1Database;
   R2: R2Bucket;
   VECTORIZE: VectorizeIndex;
+  VOICE_CHAT_AGENT: DurableObjectNamespace;
   OPENAI_API_KEY: string;
   ELEVENLABS_API_KEY: string;
+  DEEPGRAM_API_KEY: string;
   DID_API_KEY: string;
+  ACCOUNT_ID: string;
+  API_TOKEN: string;
 }
 
 // Document types
