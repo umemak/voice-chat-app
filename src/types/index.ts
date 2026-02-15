@@ -24,11 +24,12 @@ export type LLMProvider = 'cloudflare' | 'openai';
 
 // Cloudflare Workers AI LLM Models
 export type CloudflareLLMModel =
-  | '@cf/openai/gpt-oss-120b'                    // GPT OSS 120B (latest, high quality)
-  | '@cf/meta/llama-3.3-70b-instruct-fp8-fast'   // Llama 3.3 70B (high quality, Japanese)
-  | '@cf/meta/llama-3.1-8b-instruct-fast'        // Llama 3.1 8B (fast, lightweight)
-  | '@cf/qwen/qwen2.5-72b-instruct-fp8'          // Qwen 2.5 72B (excellent Japanese)
-  | '@cf/google/gemma-2-9b-it-lora';             // Gemma 2 9B
+  | '@cf/openai/gpt-oss-120b'                    // GPT OSS 120B (OpenAI, latest)
+  | '@cf/meta/llama-4-scout-17b-16e-instruct'    // Llama 4 Scout (Meta, 2025 latest, multimodal)
+  | '@cf/meta/llama-3.3-70b-instruct-fp8-fast'   // Llama 3.3 70B (Meta, high quality)
+  | '@cf/zai-org/glm-4.7-flash'                  // GLM 4.7 Flash (zai-org, 100+ languages)
+  | '@cf/meta/llama-3.1-8b-instruct-fast'        // Llama 3.1 8B (Meta, lightweight)
+  | '@cf/qwen/qwen2.5-72b-instruct-fp8';         // Qwen 2.5 72B (Qwen, Japanese-focused)
 
 export interface CloudflareLLMModelInfo {
   id: CloudflareLLMModel;

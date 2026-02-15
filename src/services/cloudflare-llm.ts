@@ -70,10 +70,11 @@ export class CloudflareLLMService {
   static getModelDisplayName(model: CloudflareLLMModel): string {
     const modelNames: Record<CloudflareLLMModel, string> = {
       '@cf/openai/gpt-oss-120b': 'GPT OSS 120B',
+      '@cf/meta/llama-4-scout-17b-16e-instruct': 'Llama 4 Scout 17B',
       '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 'Llama 3.3 70B',
+      '@cf/zai-org/glm-4.7-flash': 'GLM 4.7 Flash',
       '@cf/meta/llama-3.1-8b-instruct-fast': 'Llama 3.1 8B',
       '@cf/qwen/qwen2.5-72b-instruct-fp8': 'Qwen 2.5 72B',
-      '@cf/google/gemma-2-9b-it-lora': 'Gemma 2 9B',
     };
     return modelNames[model] || model;
   }
@@ -95,33 +96,39 @@ export class CloudflareLLMService {
     }> = {
       '@cf/openai/gpt-oss-120b': {
         name: 'GPT OSS 120B',
-        description: '最新の大規模モデル、高品質・日本語対応',
+        description: 'OpenAI最新、高品質・汎用・高推論能力',
+        japaneseSupport: true,
+        contextLength: 8192,
+      },
+      '@cf/meta/llama-4-scout-17b-16e-instruct': {
+        name: 'Llama 4 Scout 17B',
+        description: '2025年最新、マルチモーダル、Function calling対応',
         japaneseSupport: true,
         contextLength: 8192,
       },
       '@cf/meta/llama-3.3-70b-instruct-fp8-fast': {
         name: 'Llama 3.3 70B',
-        description: '高品質、日本語対応、高速',
+        description: '高品質、高速、Function calling対応',
         japaneseSupport: true,
         contextLength: 8192,
       },
+      '@cf/zai-org/glm-4.7-flash': {
+        name: 'GLM 4.7 Flash',
+        description: '100+言語対応、高速・効率的、Function calling対応',
+        japaneseSupport: true,
+        contextLength: 131072,
+      },
       '@cf/meta/llama-3.1-8b-instruct-fast': {
         name: 'Llama 3.1 8B',
-        description: '軽量・高速、日本語対応',
+        description: '軽量・高速、多言語対応',
         japaneseSupport: true,
         contextLength: 8192,
       },
       '@cf/qwen/qwen2.5-72b-instruct-fp8': {
         name: 'Qwen 2.5 72B',
-        description: '日本語特化、高品質',
+        description: '日本語特化、32K context window',
         japaneseSupport: true,
         contextLength: 32768,
-      },
-      '@cf/google/gemma-2-9b-it-lora': {
-        name: 'Gemma 2 9B',
-        description: 'Google製、軽量',
-        japaneseSupport: true,
-        contextLength: 8192,
       },
     };
     return modelInfo[model];

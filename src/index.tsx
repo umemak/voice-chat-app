@@ -197,11 +197,17 @@ app.get('/', (c) => {
                         <div id="cloudflare-llm-model-section" class="mb-4">
                             <label class="block text-sm font-medium mb-2">Cloudflare LLMモデル</label>
                             <select id="cloudflare-llm-model-select" class="w-full px-3 py-2 border rounded-lg">
-                              <option value="@cf/openai/gpt-oss-120b">GPT OSS 120B（最新・推奨・日本語対応）</option>
-                              <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast">Llama 3.3 70B（高品質・日本語対応）</option>
-                              <option value="@cf/qwen/qwen2.5-72b-instruct-fp8">Qwen 2.5 72B（日本語特化）</option>
+                              <option value="@cf/openai/gpt-oss-120b">GPT OSS 120B（推奨・OpenAI最新）</option>
+                              <option value="@cf/meta/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B（2025年最新・マルチモーダル）</option>
+                              <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast">Llama 3.3 70B（高品質・高速）</option>
+                              <option value="@cf/zai-org/glm-4.7-flash">GLM 4.7 Flash（100+言語対応）</option>
                               <option value="@cf/meta/llama-3.1-8b-instruct-fast">Llama 3.1 8B（軽量・高速）</option>
-                              <option value="@cf/google/gemma-2-9b-it-lora">Gemma 2 9B（Google製）</option>
+                              <option value="@cf/qwen/qwen2.5-72b-instruct-fp8">Qwen 2.5 72B（日本語特化・32K context）</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">
+                              🇯🇵 全モデル日本語対応済み
+                            </p>
+                        </div>
                             </select>
                             <p class="text-xs text-gray-500 mt-1">
                               🇯🇵 すべて日本語対応
