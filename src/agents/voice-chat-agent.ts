@@ -22,8 +22,6 @@ import type {
   CloudflareLLMModel
 } from '../types';
 import { RAGTextProcessor } from '../components/rag-text-processor';
-import { CloudflareTTS } from '../components/cloudflare-tts';
-import { CloudflareSTT } from '../components/cloudflare-stt';
 
 export class VoiceChatAgent extends RealtimeAgent<Bindings> {
   private textProcessor?: RAGTextProcessor;
@@ -75,26 +73,14 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
     // Create RealtimeKit transport for audio I/O
     const rtkTransport = new RealtimeKitTransport(meetingId, authToken);
 
-    // Select STT component based on provider
-    let sttComponent;
-    if (sttProvider === 'cloudflare') {
-      console.log(`[Agent] Using Cloudflare Workers AI STT: ${cloudflareSTTModel}`);
-      sttComponent = new CloudflareSTT(this.env.AI, cloudflareSTTModel);
-    } else {
-      console.log('[Agent] Using Deepgram STT');
-      sttComponent = new DeepgramSTT(this.env.DEEPGRAM_API_KEY);
-    }
+    // Note: Realtime Agents SDK only supports Deepgram STT and ElevenLabs TTS
+    // For Cloudflare Workers AI STT/TTS, use HTTP mode (/http-chat)
+    console.log('[Agent] Using Deepgram STT (Realtime Agents)');
+    const sttComponent = new DeepgramSTT(this.env.DEEPGRAM_API_KEY);
 
-    // Select TTS component based on provider
-    let ttsComponent;
-    if (ttsProvider === 'cloudflare') {
-      console.log(`[Agent] Using Cloudflare Workers AI TTS: ${cloudflareTTSModel}`);
-      ttsComponent = new CloudflareTTS(this.env.AI, cloudflareTTSModel);
-    } else {
-      console.log('[Agent] Using ElevenLabs TTS');
-      const ttsVoiceId = voiceId || await this.getDefaultVoiceId();
-      ttsComponent = new ElevenLabsTTS(this.env.ELEVENLABS_API_KEY, ttsVoiceId);
-    }
+    console.log('[Agent] Using ElevenLabs TTS (Realtime Agents)');
+    const ttsVoiceId = voiceId || await this.getDefaultVoiceId();
+    const ttsComponent = new ElevenLabsTTS(this.env.ELEVENLABS_API_KEY, ttsVoiceId);
 
     // Build pipeline: Transport → STT → TextProcessor → TTS → Transport
     await this.initPipeline(

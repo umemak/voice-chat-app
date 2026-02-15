@@ -5,25 +5,6 @@
   "pages_build_output_dir": "./dist",
   "compatibility_flags": ["nodejs_compat"],
   
-  // Durable Objects for Realtime Agents
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "VOICE_CHAT_AGENT",
-        "class_name": "VoiceChatAgent",
-        "script_name": "webapp"
-      }
-    ]
-  },
-  
-  // Durable Objects migrations
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": ["VoiceChatAgent"]
-    }
-  ],
-  
   // Storage resources (IDs to be filled after creation)
   "ai": {
     "binding": "AI"
