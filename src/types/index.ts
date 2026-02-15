@@ -16,6 +16,9 @@ export type Bindings = {
 // TTS Provider types
 export type TTSProvider = 'cloudflare' | 'elevenlabs';
 
+// STT Provider types
+export type STTProvider = 'cloudflare' | 'deepgram';
+
 // Cloudflare Workers AI TTS Models
 export type CloudflareTTSModel = 
   | '@cf/deepgram/aura-1'           // English (default)
@@ -23,11 +26,27 @@ export type CloudflareTTSModel =
   | '@cf/deepgram/aura-2-es'        // Spanish
   | '@cf/myshell-ai/melotts';       // MeloTTS (multilingual)
 
+// Cloudflare Workers AI STT Models
+export type CloudflareSTTModel =
+  | '@cf/openai/whisper'                    // Whisper (multilingual, Japanese supported)
+  | '@cf/openai/whisper-large-v3-turbo'     // Whisper Large v3 Turbo (best quality, Japanese)
+  | '@cf/deepgram/nova-3'                   // Deepgram Nova 3 (best performance)
+  | '@cf/deepgram/flux'                     // Deepgram Flux (experimental)
+  | '@cf/openai/whisper-tiny-en';           // Whisper Tiny (English only, fast)
+
 export interface CloudflareTTSModelInfo {
   id: CloudflareTTSModel;
   name: string;
   language: string;
   description: string;
+}
+
+export interface CloudflareSTTModelInfo {
+  id: CloudflareSTTModel;
+  name: string;
+  language: string;
+  description: string;
+  japaneseSupport: boolean;
 }
 
 export interface AgentInitOptions {
@@ -40,6 +59,8 @@ export interface AgentInitOptions {
   voiceId?: string;
   ttsProvider?: TTSProvider;
   cloudflareTTSModel?: CloudflareTTSModel;
+  sttProvider?: STTProvider;
+  cloudflareSTTModel?: CloudflareSTTModel;
 }
 
 // Document types

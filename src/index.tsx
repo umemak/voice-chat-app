@@ -19,12 +19,22 @@ app.route('/api/admin', adminRoutes)
 // Realtime Agent routes
 app.post('/api/agent/init', async (c) => {
   try {
-    const { meetingId, authToken, voiceId, ttsProvider, cloudflareTTSModel } = await c.req.json<{
+    const { 
+      meetingId, 
+      authToken, 
+      voiceId, 
+      ttsProvider, 
+      cloudflareTTSModel,
+      sttProvider,
+      cloudflareSTTModel
+    } = await c.req.json<{
       meetingId: string;
       authToken: string;
       voiceId?: string;
       ttsProvider?: 'cloudflare' | 'elevenlabs';
       cloudflareTTSModel?: string;
+      sttProvider?: 'cloudflare' | 'deepgram';
+      cloudflareSTTModel?: string;
     }>();
 
     if (!meetingId || !authToken) {
@@ -45,12 +55,16 @@ app.post('/api/agent/init', async (c) => {
       c.env.API_TOKEN,
       voiceId,
       ttsProvider || 'cloudflare',
-      cloudflareTTSModel || '@cf/deepgram/aura-2-en'
+      cloudflareTTSModel || '@cf/deepgram/aura-2-en',
+      sttProvider || 'cloudflare',
+      cloudflareSTTModel || '@cf/openai/whisper-large-v3-turbo'
     );
 
     return c.json({ 
       success: true, 
       agentId, 
+      sttProvider: sttProvider || 'cloudflare',
+      cloudflareSTTModel: cloudflareSTTModel || '@cf/openai/whisper-large-v3-turbo',
       ttsProvider: ttsProvider || 'cloudflare',
       cloudflareTTSModel: cloudflareTTSModel || '@cf/deepgram/aura-2-en'
     });
@@ -143,7 +157,29 @@ app.get('/', (c) => {
                         </div>
 
                         <div class="mb-4">
-                            <label class="block text-sm font-medium mb-2">TTSプロバイダー</label>
+                            <label class="block text-sm font-medium mb-2">STTプロバイダー（音声認識）</label>
+                            <select id="stt-provider-select" class="w-full px-3 py-2 border rounded-lg mb-3">
+                              <option value="cloudflare">Cloudflare Workers AI（無料・APIキー不要）</option>
+                              <option value="deepgram">Deepgram（高品質・要APIキー）</option>
+                            </select>
+                        </div>
+
+                        <div id="cloudflare-stt-model-section" class="mb-4">
+                            <label class="block text-sm font-medium mb-2">Cloudflare STTモデル</label>
+                            <select id="cloudflare-stt-model-select" class="w-full px-3 py-2 border rounded-lg">
+                              <option value="@cf/openai/whisper-large-v3-turbo">Whisper Large v3 Turbo（推奨・日本語対応）</option>
+                              <option value="@cf/openai/whisper">Whisper（多言語・日本語対応）</option>
+                              <option value="@cf/deepgram/nova-3">Deepgram Nova 3（高性能・日本語対応）</option>
+                              <option value="@cf/deepgram/flux">Deepgram Flux（実験的）</option>
+                              <option value="@cf/openai/whisper-tiny-en">Whisper Tiny（英語のみ・高速）</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">
+                              🇯🇵 日本語対応: Whisper系、Nova 3
+                            </p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">TTSプロバイダー（音声合成）</label>
                             <select id="tts-provider-select" class="w-full px-3 py-2 border rounded-lg mb-3">
                               <option value="cloudflare">Cloudflare Workers AI（無料・APIキー不要）</option>
                               <option value="elevenlabs">ElevenLabs（高品質・ボイスクローン対応）</option>

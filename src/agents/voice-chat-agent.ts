@@ -12,9 +12,10 @@ import {
   ElevenLabsTTS,
 } from '@cloudflare/realtime-agents';
 import type { DurableObjectState } from '@cloudflare/workers-types';
-import type { Bindings, TTSProvider, CloudflareTTSModel } from '../types';
+import type { Bindings, TTSProvider, CloudflareTTSModel, STTProvider, CloudflareSTTModel } from '../types';
 import { RAGTextProcessor } from '../components/rag-text-processor';
 import { CloudflareTTS } from '../components/cloudflare-tts';
+import { CloudflareSTT } from '../components/cloudflare-stt';
 
 export class VoiceChatAgent extends RealtimeAgent<Bindings> {
   private textProcessor?: RAGTextProcessor;
@@ -35,6 +36,8 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
    * @param voiceId - Optional ElevenLabs voice ID for custom voice
    * @param ttsProvider - TTS provider to use ('cloudflare' or 'elevenlabs')
    * @param cloudflareTTSModel - Cloudflare TTS model to use (if provider is 'cloudflare')
+   * @param sttProvider - STT provider to use ('cloudflare' or 'deepgram')
+   * @param cloudflareSTTModel - Cloudflare STT model to use (if provider is 'cloudflare')
    */
   async init(
     agentId: string,
@@ -45,9 +48,12 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
     apiToken: string,
     voiceId?: string,
     ttsProvider: TTSProvider = 'cloudflare',
-    cloudflareTTSModel: CloudflareTTSModel = '@cf/deepgram/aura-2-en'
+    cloudflareTTSModel: CloudflareTTSModel = '@cf/deepgram/aura-2-en',
+    sttProvider: STTProvider = 'cloudflare',
+    cloudflareSTTModel: CloudflareSTTModel = '@cf/openai/whisper-large-v3-turbo'
   ) {
     console.log(`[Agent] Initializing agent ${agentId} for meeting ${meetingId}`);
+    console.log(`[Agent] STT Provider: ${sttProvider}`);
     console.log(`[Agent] TTS Provider: ${ttsProvider}`);
 
     // Create RAG text processor
@@ -55,6 +61,16 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
 
     // Create RealtimeKit transport for audio I/O
     const rtkTransport = new RealtimeKitTransport(meetingId, authToken);
+
+    // Select STT component based on provider
+    let sttComponent;
+    if (sttProvider === 'cloudflare') {
+      console.log(`[Agent] Using Cloudflare Workers AI STT: ${cloudflareSTTModel}`);
+      sttComponent = new CloudflareSTT(this.env.AI, cloudflareSTTModel);
+    } else {
+      console.log('[Agent] Using Deepgram STT');
+      sttComponent = new DeepgramSTT(this.env.DEEPGRAM_API_KEY);
+    }
 
     // Select TTS component based on provider
     let ttsComponent;
@@ -71,7 +87,7 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
     await this.initPipeline(
       [
         rtkTransport,
-        new DeepgramSTT(this.env.DEEPGRAM_API_KEY),
+        sttComponent,
         this.textProcessor,
         ttsComponent,
         rtkTransport,

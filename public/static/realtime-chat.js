@@ -11,8 +11,10 @@ class RealtimeVoiceChat {
     this.authToken = null;
     this.agentId = null;
     this.selectedVoiceId = null;
+    this.selectedSTTProvider = 'cloudflare'; // Default to Cloudflare STT
+    this.selectedCloudflareSTTModel = '@cf/openai/whisper-large-v3-turbo'; // Default STT model
     this.selectedTTSProvider = 'cloudflare'; // Default to Cloudflare TTS
-    this.selectedCloudflareTTSModel = '@cf/deepgram/aura-2-en'; // Default model
+    this.selectedCloudflareTTSModel = '@cf/deepgram/aura-2-en'; // Default TTS model
     this.isConnected = false;
 
     this.init();
@@ -55,6 +57,24 @@ class RealtimeVoiceChat {
 
     document.getElementById('disconnect-btn').addEventListener('click', () => {
       this.disconnect();
+    });
+
+    // STT provider selection
+    document.getElementById('stt-provider-select').addEventListener('change', (e) => {
+      this.selectedSTTProvider = e.target.value;
+      
+      // Show/hide Cloudflare STT model section
+      const cloudflareSTTModelSection = document.getElementById('cloudflare-stt-model-section');
+      if (this.selectedSTTProvider === 'cloudflare') {
+        cloudflareSTTModelSection.classList.remove('hidden');
+      } else {
+        cloudflareSTTModelSection.classList.add('hidden');
+      }
+    });
+
+    // Cloudflare STT model selection
+    document.getElementById('cloudflare-stt-model-select').addEventListener('change', (e) => {
+      this.selectedCloudflareSTTModel = e.target.value;
     });
 
     // TTS provider selection
@@ -189,10 +209,16 @@ class RealtimeVoiceChat {
       const requestBody = {
         meetingId: this.meetingId,
         authToken: this.authToken,
+        sttProvider: this.selectedSTTProvider,
         ttsProvider: this.selectedTTSProvider,
       };
 
-      // Add provider-specific options
+      // Add STT provider-specific options
+      if (this.selectedSTTProvider === 'cloudflare') {
+        requestBody.cloudflareSTTModel = this.selectedCloudflareSTTModel;
+      }
+
+      // Add TTS provider-specific options
       if (this.selectedTTSProvider === 'elevenlabs' && this.selectedVoiceId) {
         requestBody.voiceId = this.selectedVoiceId;
       } else if (this.selectedTTSProvider === 'cloudflare') {
@@ -214,18 +240,27 @@ class RealtimeVoiceChat {
         this.agentId = data.agentId;
         this.isConnected = true;
         
-        let providerInfo = '';
-        if (data.ttsProvider === 'cloudflare') {
-          const modelName = this.getModelDisplayName(data.cloudflareTTSModel);
-          providerInfo = `Cloudflare Workers AI (${modelName})`;
+        // Build status message
+        let sttInfo = '';
+        if (data.sttProvider === 'cloudflare') {
+          const sttModelName = this.getSTTModelDisplayName(data.cloudflareSTTModel);
+          sttInfo = `Cloudflare AI (${sttModelName})`;
         } else {
-          providerInfo = 'ElevenLabs';
+          sttInfo = 'Deepgram';
+        }
+
+        let ttsInfo = '';
+        if (data.ttsProvider === 'cloudflare') {
+          const ttsModelName = this.getTTSModelDisplayName(data.cloudflareTTSModel);
+          ttsInfo = `Cloudflare AI (${ttsModelName})`;
+        } else {
+          ttsInfo = 'ElevenLabs';
         }
         
-        this.updateStatus(`接続成功 - AIエージェントが会話に参加しました（TTS: ${providerInfo}）`, 'connected');
+        this.updateStatus(`接続成功 - AIエージェント起動（STT: ${sttInfo}, TTS: ${ttsInfo}）`, 'connected');
 
         // Show success message
-        alert(`AIエージェントが起動しました！\nTTS: ${providerInfo}\n\nRealtimeKitのミーティングに参加して話しかけてください。`);
+        alert(`AIエージェントが起動しました！\n\nSTT: ${sttInfo}\nTTS: ${ttsInfo}\n\nRealtimeKitのミーティングに参加して話しかけてください。`);
       } else {
         throw new Error(data.error || 'Agent initialization failed');
       }
@@ -236,7 +271,18 @@ class RealtimeVoiceChat {
     }
   }
 
-  getModelDisplayName(modelId) {
+  getSTTModelDisplayName(modelId) {
+    const modelNames = {
+      '@cf/openai/whisper-large-v3-turbo': 'Whisper Large v3 Turbo',
+      '@cf/openai/whisper': 'Whisper',
+      '@cf/deepgram/nova-3': 'Nova 3',
+      '@cf/deepgram/flux': 'Flux',
+      '@cf/openai/whisper-tiny-en': 'Whisper Tiny EN',
+    };
+    return modelNames[modelId] || modelId;
+  }
+
+  getTTSModelDisplayName(modelId) {
     const modelNames = {
       '@cf/deepgram/aura-2-en': 'Aura 2 EN',
       '@cf/deepgram/aura-1': 'Aura 1 EN',
