@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
 import type { Bindings } from './types'
 import adminRoutes from './routes/admin'
+import chatHttpRoutes from './routes/chat-http'
 import { VoiceChatAgent } from './agents/voice-chat-agent'
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -15,6 +16,7 @@ app.use('/static/*', serveStatic({ root: './public' }))
 
 // Mount API routes
 app.route('/api/admin', adminRoutes)
+app.route('/api/chat-http', chatHttpRoutes)
 
 // Realtime Agent routes
 app.post('/api/agent/init', async (c) => {
@@ -143,7 +145,8 @@ app.get('/', (c) => {
                         音声チャットアプリ
                     </h1>
                     <nav class="space-x-4">
-                        <a href="/" class="hover:underline font-bold">チャット</a>
+                        <a href="/" class="hover:underline font-bold">Realtimeモード</a>
+                        <a href="/http-chat" class="hover:underline">HTTPモード</a>
                         <a href="/admin" class="hover:underline">管理画面</a>
                     </nav>
                 </div>
@@ -284,6 +287,153 @@ app.get('/', (c) => {
   `)
 })
 
+// HTTP Chat page (Simple mode - no WebRTC)
+app.get('/http-chat', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>音声チャット（HTTPモード） - voice-chat-app</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-gray-100">
+        <div class="min-h-screen flex flex-col">
+            <header class="bg-blue-600 text-white p-4 shadow-md">
+                <div class="container mx-auto flex justify-between items-center">
+                    <h1 class="text-2xl font-bold">
+                        <i class="fas fa-comments mr-2"></i>
+                        音声チャット（HTTPモード）
+                    </h1>
+                    <nav class="space-x-4">
+                        <a href="/" class="hover:underline">Realtimeモード</a>
+                        <a href="/http-chat" class="hover:underline font-bold">HTTPモード</a>
+                        <a href="/admin" class="hover:underline">管理画面</a>
+                    </nav>
+                </div>
+            </header>
+            
+            <main class="flex-1 container mx-auto p-6">
+                <div class="max-w-4xl mx-auto space-y-6">
+                    <!-- Status -->
+                    <div class="bg-white rounded-lg shadow-lg p-4">
+                        <div id="http-connection-status" class="flex items-center">
+                            <i class="fas fa-circle text-green-500 mr-2"></i>
+                            <span id="http-status-text" class="text-sm font-medium">準備完了</span>
+                        </div>
+                    </div>
+
+                    <!-- Settings -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <h2 class="text-xl font-bold mb-4">
+                            <i class="fas fa-cog mr-2"></i>
+                            設定
+                        </h2>
+
+                        <!-- STT Settings -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">STT（音声認識）</label>
+                            <select id="http-stt-provider" class="w-full px-3 py-2 border rounded-lg mb-2">
+                              <option value="cloudflare">Cloudflare Workers AI（無料）</option>
+                              <option value="deepgram" disabled>Deepgram（準備中）</option>
+                            </select>
+                        </div>
+
+                        <div id="http-stt-model-section" class="mb-4">
+                            <select id="http-stt-model" class="w-full px-3 py-2 border rounded-lg">
+                              <option value="@cf/openai/whisper-large-v3-turbo">Whisper Large v3 Turbo（推奨）</option>
+                              <option value="@cf/openai/whisper">Whisper</option>
+                              <option value="@cf/deepgram/nova-3">Deepgram Nova 3</option>
+                            </select>
+                        </div>
+
+                        <!-- LLM Settings -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">LLM（応答生成）</label>
+                            <select id="http-llm-provider" class="w-full px-3 py-2 border rounded-lg mb-2">
+                              <option value="cloudflare">Cloudflare Workers AI（無料）</option>
+                              <option value="openai">OpenAI GPT-4o-mini</option>
+                            </select>
+                        </div>
+
+                        <div id="http-llm-model-section" class="mb-4">
+                            <select id="http-llm-model" class="w-full px-3 py-2 border rounded-lg">
+                              <option value="@cf/openai/gpt-oss-120b">GPT OSS 120B（推奨）</option>
+                              <option value="@cf/meta/llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B</option>
+                              <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast">Llama 3.3 70B</option>
+                              <option value="@cf/zai-org/glm-4.7-flash">GLM 4.7 Flash</option>
+                              <option value="@cf/qwen/qwen2.5-72b-instruct-fp8">Qwen 2.5 72B</option>
+                            </select>
+                        </div>
+
+                        <!-- TTS Settings -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">TTS（音声合成）</label>
+                            <select id="http-tts-provider" class="w-full px-3 py-2 border rounded-lg mb-2">
+                              <option value="cloudflare">Cloudflare Workers AI（無料）</option>
+                              <option value="elevenlabs" disabled>ElevenLabs（準備中）</option>
+                            </select>
+                        </div>
+
+                        <div id="http-tts-model-section" class="mb-4">
+                            <select id="http-tts-model" class="w-full px-3 py-2 border rounded-lg">
+                              <option value="@cf/deepgram/aura-2-en">Deepgram Aura 2 EN（推奨）</option>
+                              <option value="@cf/deepgram/aura-1">Deepgram Aura 1 EN</option>
+                              <option value="@cf/myshell-ai/melotts">MeloTTS</option>
+                            </select>
+                        </div>
+
+                        <div class="flex space-x-2">
+                            <button id="record-btn" 
+                                    class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">
+                                <i class="fas fa-microphone mr-2"></i>
+                                録音開始
+                            </button>
+                            <button id="clear-chat-btn" 
+                                    class="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold">
+                                <i class="fas fa-trash mr-2"></i>
+                                クリア
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chat Messages -->
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <h2 class="text-xl font-bold mb-4">
+                            <i class="fas fa-comment-dots mr-2"></i>
+                            会話履歴
+                        </h2>
+                        <div id="messages-container" class="h-96 overflow-y-auto border rounded-lg p-4">
+                            <!-- Messages will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- Info -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h3 class="font-bold text-blue-800 mb-2">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            HTTPモードについて
+                        </h3>
+                        <ul class="list-disc list-inside space-y-1 text-sm text-blue-700">
+                            <li>シンプルなHTTP API実装</li>
+                            <li>WebRTC不要・セットアップ簡単</li>
+                            <li>Cloudflare Workers AIのみで動作可能</li>
+                            <li>ターンベース（順番に話す）</li>
+                            <li>リアルタイム性はRealtimeモードより劣る</li>
+                        </ul>
+                    </div>
+                </div>
+            </main>
+        </div>
+        
+        <script src="/static/http-chat.js"></script>
+    </body>
+    </html>
+  `)
+})
+
 // Admin page
 app.get('/admin', (c) => {
   return c.html(`
@@ -305,7 +455,8 @@ app.get('/admin', (c) => {
                         管理画面
                     </h1>
                     <nav class="space-x-4">
-                        <a href="/" class="hover:underline">チャット</a>
+                        <a href="/" class="hover:underline">Realtimeモード</a>
+                        <a href="/http-chat" class="hover:underline">HTTPモード</a>
                         <a href="/admin" class="hover:underline font-bold">管理画面</a>
                     </nav>
                 </div>

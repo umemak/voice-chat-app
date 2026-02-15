@@ -1,280 +1,253 @@
-# 音声チャットアプリ（Realtime Voice AI）
+# 音声チャットアプリ (voice-chat-app)
 
-## プロジェクト概要
+## 📋 プロジェクト概要
 
-**名称**: 音声チャットアプリ（Voice Chat App with Cloudflare Realtime Agents）
+Cloudflare Workers AIとRealtime Agentsを活用したリアルタイム音声チャットアプリケーション。2つのモードで動作します：
 
-**目標**: RAG技術を活用したリアルタイム音声対話型AIアシスタント
+### 🎯 2つのモード
 
-**主要機能**:
-- 🎤 **リアルタイム音声入力**（WebRTC + Deepgram STT on Workers AI）
-- 📚 **RAG検索**（Retrieval-Augmented Generation: Cloudflare Vectorize）
-- 🤖 **AI応答生成**（GPT-4o-mini with context）
-- 🔊 **音声出力**（ElevenLabs TTS ボイスクローン対応）
-- ⚡ **超低遅延**（<800ms レスポンス）
-- 📁 **学習データ管理**（PowerPoint、テキスト、PDF対応）
-- 🌍 **グローバルエッジ展開**（330拠点以上）
+#### 1. **Realtimeモード**（低遅延・WebRTC）
+- Cloudflare Realtime Agents SDKを使用
+- WebRTC + RealtimeKit で超低遅延（<800ms）
+- STT: Deepgram
+- LLM: Cloudflare Workers AI / OpenAI（選択可能）
+- TTS: ElevenLabs
+- 用途: 本番環境・高品質な音声チャット
 
-## 技術スタック
+#### 2. **HTTPモード**（シンプル・完全無料）
+- シンプルなHTTP API実装
+- WebRTC不要・セットアップ簡単
+- STT: Cloudflare Workers AI
+- LLM: Cloudflare Workers AI / OpenAI（選択可能）
+- TTS: Cloudflare Workers AI
+- 用途: 動作確認・開発環境・Cloudflareのみで完結
 
-### コア技術
-- **Cloudflare Realtime Agents SDK**: リアルタイム音声AIパイプライン
-- **RealtimeKit**: WebRTC接続管理
-- **Durable Objects**: ステートフル調整
-- **Hono**: 軽量高速なWebフレームワーク
+## ✨ 主な機能
+
+### 共通機能
+- **RAG（Retrieval-Augmented Generation）**: Vectorizeを使った文書検索
+- **会話履歴管理**: D1データベースで永続化
+- **管理画面**: ドキュメントアップロード、音声プロファイル管理
+- **マルチプロバイダー対応**: Cloudflare / OpenAI / Deepgram / ElevenLabsから選択可能
+
+### Realtimeモード限定
+- 双方向リアルタイム通信
+- 割り込み対応
+- 複数参加者対応
+
+### HTTPモード限定
+- APIキー不要で動作確認可能
+- 実装がシンプル
+- セットアップが簡単
+
+## 🛠️ 技術スタック
+
+### バックエンド
+- **Hono Framework**: 軽量高速なWebフレームワーク
 - **Cloudflare Workers**: エッジランタイム
-
-### データストレージ
-- **Cloudflare D1**: SQLiteベースのデータベース（メタデータ管理）
-- **Cloudflare R2**: S3互換オブジェクトストレージ（ファイル保存）
-- **Cloudflare Vectorize**: ベクトルデータベース（RAG用）
-
-### 外部APIサービス
-- **Deepgram on Workers AI**: STT/TTS（グローバル330拠点）
-- **OpenAI API**: Embeddings、GPT-4o-mini
-- **ElevenLabs API**: ボイスクローンTTS
-- **D-ID API**: リップシンク動画生成（オプション）
+- **Cloudflare D1**: SQLiteベースのグローバル分散DB
+- **Cloudflare Vectorize**: ベクトルデータベース
+- **Cloudflare R2**: オブジェクトストレージ
+- **Cloudflare Workers AI**: STT/LLM/TTS
 
 ### フロントエンド
-- **Vanilla JavaScript**: シンプルな実装
-- **Tailwind CSS**: スタイリング
+- **Vanilla JavaScript**: シンプルなフロントエンド
+- **TailwindCSS**: ユーティリティファーストCSS
 - **Font Awesome**: アイコン
 
-## データアーキテクチャ
+### AI モデル
 
-### データモデル
+#### STT（音声認識）
+**Cloudflare Workers AI:**
+- `@cf/openai/whisper-large-v3-turbo` （推奨・日本語対応）
+- `@cf/openai/whisper` （多言語）
+- `@cf/deepgram/nova-3` （高性能）
 
-1. **documents**: アップロードされたファイルのメタデータ
-   - id, filename, file_type, r2_key, processed, etc.
+**Deepgram:**
+- Nova 2/3 （Realtimeモード）
 
-2. **document_chunks**: ドキュメントのチャンク（RAG用）
-   - id, document_id, chunk_index, content, vector_id
+#### LLM（応答生成）
+**Cloudflare Workers AI:**
+- `@cf/openai/gpt-oss-120b` （推奨・OpenAI最新）
+- `@cf/meta/llama-4-scout-17b-16e-instruct` （2025年最新・マルチモーダル）
+- `@cf/meta/llama-3.3-70b-instruct-fp8-fast` （高品質・高速）
+- `@cf/zai-org/glm-4.7-flash` （100+言語・131K context）
+- `@cf/qwen/qwen2.5-72b-instruct-fp8` （日本語特化・32K context）
 
-3. **conversations**: 会話セッション
-   - id, session_id, started_at, ended_at
+**OpenAI:**
+- GPT-4o-mini
 
-4. **messages**: チャットメッセージ
-   - id, conversation_id, role, content, audio_url, video_url
+#### TTS（音声合成）
+**Cloudflare Workers AI:**
+- `@cf/deepgram/aura-2-en` （推奨・英語）
+- `@cf/deepgram/aura-1` （英語）
+- `@cf/myshell-ai/melotts` （多言語）
 
-5. **voice_profiles**: 音声プロファイル（ElevenLabs）
-   - id, name, voice_id, description, is_active
+**ElevenLabs:**
+- ボイスクローン対応（Realtimeモード）
 
-### データフロー（Realtime Agents Pipeline）
-
-```
-ユーザー（ブラウザ）
-   ↓ WebRTC
-RealtimeKit Transport
-   ↓ PCM Audio Stream
-Deepgram STT (Workers AI)
-   ↓ Transcript Text
-RAG Text Processor
-   ├─ Vectorize検索（関連ドキュメント）
-   ├─ OpenAI GPT-4（応答生成）
-   └─ 会話履歴管理（D1）
-   ↓ Response Text
-ElevenLabs TTS（ボイスクローン）
-   ↓ Audio Stream
-RealtimeKit Transport
-   ↓ WebRTC
-ユーザー（スピーカー出力）
-
-すべて800ms以内で完了
-```
-
-## セットアップ手順
-
-### 1. Cloudflare APIキーの設定
-
-Deploy タブで Cloudflare API キーを設定してください。
-
-必要な権限:
-- Cloudflare Pages: Edit
-- D1: Edit
-- R2: Edit
-- Vectorize: Edit
-
-### 2. 外部APIキーの準備
-
-以下のAPIキーを取得してください：
-
-- **Cloudflare Account ID & API Token**: https://dash.cloudflare.com/
-  - 必要な権限: `Realtime:Admin`, `D1:Edit`, `Vectorize:Edit`, `R2:Edit`
-- **Deepgram API Key**: https://deepgram.com/
-- **OpenAI API Key**: https://platform.openai.com/api-keys
-- **ElevenLabs API Key**: https://elevenlabs.io/
-
-### 3. ローカル開発用環境変数
-
-`.dev.vars` ファイルを作成し、APIキーを設定：
-
-```bash
-cp .dev.vars.example .dev.vars
-# .dev.vars を編集してAPIキーを入力
-
-# 必須項目:
-# - ACCOUNT_ID (Cloudflare)
-# - API_TOKEN (Cloudflare)
-# - DEEPGRAM_API_KEY
-# - OPENAI_API_KEY
-# - ELEVENLABS_API_KEY
-```
-
-### 4. Cloudflareリソースの作成
-
-```bash
-# D1 データベース作成
-npx wrangler d1 create webapp-production
-# 出力されたdatabase_idをwrangler.jsonc に記入
-
-# Vectorize インデックス作成
-npx wrangler vectorize create voice-chat-rag --dimensions=1536 --metric=cosine
-
-# R2 バケット作成
-npx wrangler r2 bucket create voice-chat-storage
-```
-
-### 5. データベースマイグレーション
-
-```bash
-# ローカル環境でマイグレーション実行
-npm run db:migrate:local
-```
-
-### 6. ビルドと起動
-
-```bash
-# ビルド
-npm run build
-
-# PM2で起動
-pm2 start ecosystem.config.cjs
-
-# 動作確認
-npm test  # curl http://localhost:3000
-```
-
-## 使い方
-
-### 管理画面（/admin）
-
-1. **学習データのアップロード**
-   - テキストファイル（.txt）を選択してアップロード
-   - PowerPoint/PDFの場合は、テキスト抽出後に手動入力が必要
-
-2. **音声プロファイルの登録**
-   - ElevenLabsで作成したVoice IDを登録
-   - 複数のボイスプロファイルを管理可能
-
-### チャット画面（/）
-
-1. **音声プロファイルを選択**
-2. **入力方法を選択**
-   - テキスト入力: 直接テキストで質問
-   - 音声録音: マイクボタンを押して録音
-3. **AIからの応答**
-   - テキスト表示
-   - 音声再生
-   - リップシンク動画（生成に時間がかかる場合があります）
-
-## デプロイ
-
-### 本番環境へのデプロイ
-
-```bash
-# 本番D1マイグレーション
-npm run db:migrate:prod
-
-# 環境変数を設定（Cloudflare Pages）
-npx wrangler pages secret put OPENAI_API_KEY --project-name webapp
-npx wrangler pages secret put ELEVENLABS_API_KEY --project-name webapp
-npx wrangler pages secret put DID_API_KEY --project-name webapp
-
-# デプロイ
-npm run deploy:prod
-```
-
-## 現在の状態
-
-### ✅ 完了した機能
-- プロジェクト初期化とGit設定
-- データベーススキーマ設計
-- バックエンドAPI実装（Hono routes）
-- 外部APIサービスラッパー（OpenAI, ElevenLabs, D-ID）
-- RAGサービス実装
-- 管理画面UI（ファイルアップロード、音声プロファイル管理）
-- チャットUI（音声録音、再生、リップシンク表示）
-
-### ⚠️ 未実装・要対応
-- Cloudflare APIキー設定（Deploy タブで設定が必要）
-- Cloudflare リソース作成（D1, Vectorize, R2）
-- ローカル環境での動作テスト
-- PowerPoint/PDF テキスト抽出機能（現在は.txtのみ対応）
-- R2の公開URL設定（D-ID用）
-- エラーハンドリングの強化
-- リアルタイム応答の最適化
-
-### 🚀 推奨される次のステップ
-
-1. **Deploy タブでCloudflare APIキーを設定**
-2. **Cloudflare リソースを作成**（D1, Vectorize, R2）
-3. **外部APIキーを.dev.varsに設定**
-4. **ローカルでビルド＆テスト**
-5. **PowerPoint/PDF処理機能の追加**（ライブラリ検討）
-6. **本番環境へのデプロイとテスト**
-
-## プロジェクト構成
+## 📦 プロジェクト構成
 
 ```
-webapp/
+voice-chat-app/
 ├── src/
-│   ├── index.tsx           # メインアプリケーション
-│   ├── types/
-│   │   └── index.ts        # TypeScript型定義
+│   ├── index.tsx              # メインアプリケーション
+│   ├── agents/
+│   │   └── voice-chat-agent.ts # Realtime Agent（Durable Object）
+│   ├── components/
+│   │   ├── rag-text-processor.ts # RAG + LLM処理
+│   │   ├── cloudflare-stt.ts    # Cloudflare STT（開発中）
+│   │   └── cloudflare-tts.ts    # Cloudflare TTS（開発中）
 │   ├── routes/
-│   │   ├── admin.ts        # 管理画面API
-│   │   └── chat.ts         # チャットAPI
-│   └── services/
-│       ├── openai.ts       # OpenAI API
-│       ├── elevenlabs.ts   # ElevenLabs API
-│       ├── did.ts          # D-ID API
-│       └── rag.ts          # RAGサービス
-├── public/
-│   └── static/
-│       ├── admin.js        # 管理画面UI
-│       └── chat.js         # チャットUI
+│   │   ├── admin.ts             # 管理API
+│   │   └── chat-http.ts         # HTTP Chat API
+│   ├── services/
+│   │   ├── openai.ts            # OpenAI API
+│   │   ├── cloudflare-llm.ts    # Cloudflare LLM
+│   │   ├── elevenlabs.ts        # ElevenLabs API
+│   │   ├── rag.ts               # RAGサービス
+│   │   └── did.ts               # D-ID API（リップシンク）
+│   └── types/
+│       └── index.ts             # 型定義
+├── public/static/
+│   ├── realtime-chat.js         # Realtimeモード UI
+│   ├── http-chat.js             # HTTPモード UI
+│   └── admin.js                 # 管理画面 UI
 ├── migrations/
-│   └── 0001_initial_schema.sql
-├── ecosystem.config.cjs    # PM2設定
-├── wrangler.jsonc          # Cloudflare設定
+│   └── 0001_initial_schema.sql  # D1スキーマ
+├── wrangler.jsonc               # Cloudflare設定
 ├── package.json
 └── README.md
 ```
 
-## トラブルシューティング
+## 🚀 セットアップ
 
-### ポート3000が使用中
-```bash
-npm run clean-port
+### 1. Cloudflare APIキー設定
+
+**Account IDとAPI Tokenを取得:**
+1. https://dash.cloudflare.com/ にログイン
+2. Account ID をコピー
+3. https://dash.cloudflare.com/profile/api-tokens で API Token作成
+4. 必要な権限:
+   - Workers AI: Edit
+   - Workers Scripts: Edit
+   - D1: Edit
+   - Vectorize: Edit
+   - R2: Edit
+   - Durable Objects: Edit
+   - Cloudflare Pages: Edit
+
+### 2. 環境変数設定
+
+`.dev.vars` ファイルを作成:
+
+```env
+# 必須: Cloudflare
+ACCOUNT_ID=your-account-id
+API_TOKEN=your-api-token
+
+# オプション: 外部サービス
+OPENAI_API_KEY=sk-...          # OpenAI LLM使用時
+DEEPGRAM_API_KEY=...           # Deepgram STT使用時（Realtimeモード）
+ELEVENLABS_API_KEY=...         # ElevenLabs TTS使用時（Realtimeモード）
 ```
 
-### ビルドエラー
+### 3. Cloudflareリソース作成
+
 ```bash
-rm -rf dist .wrangler node_modules
+# D1データベース
+npx wrangler d1 create webapp-production
+
+# Vectorizeインデックス
+npx wrangler vectorize create voice-chat-rag --dimensions=1536 --metric=cosine
+
+# R2バケット
+npx wrangler r2 bucket create voice-chat-storage
+
+# database_idをwrangler.jsoncに設定
+# "database_id": "作成されたID"
+```
+
+### 4. ローカル開発
+
+```bash
+# 依存関係インストール
 npm install
-npm run build
-```
 
-### データベースリセット
-```bash
-rm -rf .wrangler/state/v3/d1
+# D1マイグレーション
 npm run db:migrate:local
+
+# ビルド
+npm run build
+
+# 開発サーバー起動
+npm run dev:sandbox
 ```
 
-## ライセンス
+### 5. デプロイ
 
-MIT
+```bash
+# 本番環境D1マイグレーション
+npm run db:migrate:prod
 
-## 最終更新日
+# Cloudflare Pagesにデプロイ
+npm run deploy
+```
 
-2026-02-14
+## 📖 使い方
+
+### HTTPモード（推奨・初回）
+
+1. http://localhost:3000/http-chat にアクセス
+2. STT/LLM/TTS を Cloudflare Workers AI に設定
+3. 「録音開始」ボタンをクリック
+4. 話す → 「停止」→ AI応答を待つ
+5. **APIキー不要で動作確認可能！**
+
+### Realtimeモード（本番環境）
+
+1. http://localhost:3000/ にアクセス
+2. STT/LLM/TTS プロバイダーを選択
+3. https://dash.realtime.cloudflare.com/ で Meeting作成
+4. Meeting IDとAuth Tokenを入力
+5. AIエージェント起動
+6. 別タブでミーティングに参加
+
+### 管理画面
+
+1. http://localhost:3000/admin にアクセス
+2. 学習データ（テキストファイル）をアップロード
+3. 音声プロファイル（ElevenLabs Voice ID）を登録
+
+## 🎯 推奨構成
+
+### 完全無料構成（HTTPモード）
+```
+STT: Cloudflare Workers AI (Whisper Large v3 Turbo)
+LLM: Cloudflare Workers AI (GPT OSS 120B)
+TTS: Cloudflare Workers AI (Aura 2 EN)
+必要なAPIキー: Cloudflare のみ
+```
+
+### 高品質構成（Realtimeモード）
+```
+STT: Deepgram (Nova 3)
+LLM: Cloudflare Workers AI (GPT OSS 120B)
+TTS: ElevenLabs (ボイスクローン)
+必要なAPIキー: Cloudflare + Deepgram + ElevenLabs
+```
+
+## 🔗 リンク
+
+- **GitHub**: https://github.com/umemak/voice-chat-app
+- **Cloudflare Workers AI**: https://developers.cloudflare.com/workers-ai/
+- **Cloudflare Realtime**: https://developers.cloudflare.com/realtime/
+- **RealtimeKit**: https://realtime.cloudflare.com/
+
+## 📝 ライセンス
+
+MIT License
+
+## 🤝 コントリビューション
+
+Issues・Pull Requestsを歓迎します！
