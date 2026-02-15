@@ -5,10 +5,10 @@ API_TOKEN=your-cloudflare-api-token
 # OpenAI API Key (Embeddings, GPT-4)
 OPENAI_API_KEY=sk-...
 
-# Deepgram API Key (STT/TTS via Workers AI)
+# Deepgram API Key (STT via Workers AI)
 DEEPGRAM_API_KEY=...
 
-# ElevenLabs API Key (Voice Clone TTS)
+# ElevenLabs API Key (Voice Clone TTS - OPTIONAL if using Cloudflare TTS)
 ELEVENLABS_API_KEY=...
 
 # D-ID API Key (Lip-sync Video - Optional)

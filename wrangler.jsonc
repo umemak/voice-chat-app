@@ -25,6 +25,9 @@
   ],
   
   // Storage resources (IDs to be filled after creation)
+  "ai": {
+    "binding": "AI"
+  },
   "r2_buckets": [
     {
       "binding": "R2",

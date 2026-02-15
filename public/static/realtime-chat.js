@@ -11,6 +11,7 @@ class RealtimeVoiceChat {
     this.authToken = null;
     this.agentId = null;
     this.selectedVoiceId = null;
+    this.selectedTTSProvider = 'cloudflare'; // Default to Cloudflare TTS
     this.isConnected = false;
 
     this.init();
@@ -53,6 +54,19 @@ class RealtimeVoiceChat {
 
     document.getElementById('disconnect-btn').addEventListener('click', () => {
       this.disconnect();
+    });
+
+    // TTS provider selection
+    document.getElementById('tts-provider-select').addEventListener('change', (e) => {
+      this.selectedTTSProvider = e.target.value;
+      
+      // Show/hide voice profile section based on TTS provider
+      const voiceSection = document.getElementById('voice-profile-section');
+      if (this.selectedTTSProvider === 'elevenlabs') {
+        voiceSection.classList.remove('hidden');
+      } else {
+        voiceSection.classList.add('hidden');
+      }
     });
   }
 
@@ -161,17 +175,25 @@ class RealtimeVoiceChat {
 
       this.updateStatus('エージェント起動中...', 'connecting');
 
+      // Prepare request body
+      const requestBody = {
+        meetingId: this.meetingId,
+        authToken: this.authToken,
+        ttsProvider: this.selectedTTSProvider,
+      };
+
+      // Add voiceId only if ElevenLabs is selected
+      if (this.selectedTTSProvider === 'elevenlabs' && this.selectedVoiceId) {
+        requestBody.voiceId = this.selectedVoiceId;
+      }
+
       // Call agent init API
       const response = await fetch('/api/agent/init', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          meetingId: this.meetingId,
-          authToken: this.authToken,
-          voiceId: this.selectedVoiceId,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -179,10 +201,15 @@ class RealtimeVoiceChat {
       if (data.success) {
         this.agentId = data.agentId;
         this.isConnected = true;
-        this.updateStatus('接続成功 - AIエージェントが会話に参加しました', 'connected');
+        
+        const providerName = data.ttsProvider === 'cloudflare' 
+          ? 'Cloudflare Workers AI' 
+          : 'ElevenLabs';
+        
+        this.updateStatus(`接続成功 - AIエージェントが会話に参加しました（TTS: ${providerName}）`, 'connected');
 
         // Show success message
-        alert('AIエージェントが起動しました！RealtimeKitのミーティングに参加して話しかけてください。');
+        alert(`AIエージェントが起動しました！\nTTSプロバイダー: ${providerName}\n\nRealtimeKitのミーティングに参加して話しかけてください。`);
       } else {
         throw new Error(data.error || 'Agent initialization failed');
       }

@@ -19,10 +19,11 @@ app.route('/api/admin', adminRoutes)
 // Realtime Agent routes
 app.post('/api/agent/init', async (c) => {
   try {
-    const { meetingId, authToken, voiceId } = await c.req.json<{
+    const { meetingId, authToken, voiceId, ttsProvider } = await c.req.json<{
       meetingId: string;
       authToken: string;
       voiceId?: string;
+      ttsProvider?: 'cloudflare' | 'elevenlabs';
     }>();
 
     if (!meetingId || !authToken) {
@@ -41,10 +42,11 @@ app.post('/api/agent/init', async (c) => {
       url.host,
       c.env.ACCOUNT_ID,
       c.env.API_TOKEN,
-      voiceId
+      voiceId,
+      ttsProvider || 'cloudflare' // Default to Cloudflare TTS
     );
 
-    return c.json({ success: true, agentId });
+    return c.json({ success: true, agentId, ttsProvider: ttsProvider || 'cloudflare' });
   } catch (error) {
     console.error('Agent init error:', error);
     return c.json(
@@ -134,7 +136,15 @@ app.get('/', (c) => {
                         </div>
 
                         <div class="mb-4">
-                            <label class="block text-sm font-medium mb-2">音声プロファイル</label>
+                            <label class="block text-sm font-medium mb-2">TTSプロバイダー</label>
+                            <select id="tts-provider-select" class="w-full px-3 py-2 border rounded-lg mb-3">
+                              <option value="cloudflare">Cloudflare Workers AI（無料・APIキー不要）</option>
+                              <option value="elevenlabs">ElevenLabs（高品質・ボイスクローン対応）</option>
+                            </select>
+                        </div>
+
+                        <div id="voice-profile-section" class="mb-4 hidden">
+                            <label class="block text-sm font-medium mb-2">音声プロファイル（ElevenLabsのみ）</label>
                             <select id="voice-select" class="w-full px-3 py-2 border rounded-lg">
                               <option value="">デフォルト</option>
                             </select>
@@ -157,10 +167,17 @@ app.get('/', (c) => {
                     <div class="bg-white rounded-lg shadow-lg p-6">
                         <h3 class="text-lg font-bold mb-4">使い方</h3>
                         <ol class="list-decimal list-inside space-y-2 text-gray-700">
-                            <li>音声プロファイルを選択（オプション）</li>
+                            <li><strong>TTSプロバイダーを選択</strong>
+                              <ul class="list-disc list-inside ml-6 mt-1 text-sm">
+                                <li><strong>Cloudflare Workers AI</strong>: 無料、APIキー不要（動作確認用）</li>
+                                <li><strong>ElevenLabs</strong>: 高品質、ボイスクローン対応（要APIキー）</li>
+                              </ul>
+                            </li>
+                            <li>音声プロファイルを選択（ElevenLabsの場合のみ）</li>
                             <li>「接続開始」ボタンをクリック</li>
-                            <li>マイクへのアクセスを許可</li>
-                            <li>話しかけてください - AIが応答します</li>
+                            <li>RealtimeKitのMeeting IDとAuth Tokenを入力</li>
+                            <li>AIエージェントを起動</li>
+                            <li>別のタブでミーティングに参加して話しかけてください</li>
                             <li>学習データは管理画面からアップロードできます</li>
                         </ol>
                     </div>

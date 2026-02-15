@@ -4,12 +4,27 @@ export type Bindings = {
   R2: R2Bucket;
   VECTORIZE: VectorizeIndex;
   VOICE_CHAT_AGENT: DurableObjectNamespace;
+  AI: any; // Workers AI binding
   OPENAI_API_KEY: string;
   ELEVENLABS_API_KEY: string;
   DEEPGRAM_API_KEY: string;
   DID_API_KEY: string;
   ACCOUNT_ID: string;
   API_TOKEN: string;
+}
+
+// TTS Provider types
+export type TTSProvider = 'cloudflare' | 'elevenlabs';
+
+export interface AgentInitOptions {
+  agentId: string;
+  meetingId: string;
+  authToken: string;
+  workerUrl: string;
+  accountId: string;
+  apiToken: string;
+  voiceId?: string;
+  ttsProvider?: TTSProvider;
 }
 
 // Document types

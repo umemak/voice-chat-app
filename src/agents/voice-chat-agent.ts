@@ -12,8 +12,9 @@ import {
   ElevenLabsTTS,
 } from '@cloudflare/realtime-agents';
 import type { DurableObjectState } from '@cloudflare/workers-types';
-import type { Bindings } from '../types';
+import type { Bindings, TTSProvider } from '../types';
 import { RAGTextProcessor } from '../components/rag-text-processor';
+import { CloudflareTTS } from '../components/cloudflare-tts';
 
 export class VoiceChatAgent extends RealtimeAgent<Bindings> {
   private textProcessor?: RAGTextProcessor;
@@ -32,6 +33,7 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
    * @param accountId - Cloudflare account ID
    * @param apiToken - Cloudflare API token
    * @param voiceId - Optional ElevenLabs voice ID for custom voice
+   * @param ttsProvider - TTS provider to use ('cloudflare' or 'elevenlabs')
    */
   async init(
     agentId: string,
@@ -40,9 +42,11 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
     workerUrl: string,
     accountId: string,
     apiToken: string,
-    voiceId?: string
+    voiceId?: string,
+    ttsProvider: TTSProvider = 'cloudflare'
   ) {
     console.log(`[Agent] Initializing agent ${agentId} for meeting ${meetingId}`);
+    console.log(`[Agent] TTS Provider: ${ttsProvider}`);
 
     // Create RAG text processor
     this.textProcessor = new RAGTextProcessor(this.env);
@@ -50,8 +54,16 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
     // Create RealtimeKit transport for audio I/O
     const rtkTransport = new RealtimeKitTransport(meetingId, authToken);
 
-    // Get default or custom voice ID
-    const ttsVoiceId = voiceId || await this.getDefaultVoiceId();
+    // Select TTS component based on provider
+    let ttsComponent;
+    if (ttsProvider === 'cloudflare') {
+      console.log('[Agent] Using Cloudflare Workers AI TTS');
+      ttsComponent = new CloudflareTTS(this.env.AI);
+    } else {
+      console.log('[Agent] Using ElevenLabs TTS');
+      const ttsVoiceId = voiceId || await this.getDefaultVoiceId();
+      ttsComponent = new ElevenLabsTTS(this.env.ELEVENLABS_API_KEY, ttsVoiceId);
+    }
 
     // Build pipeline: Transport → STT → TextProcessor → TTS → Transport
     await this.initPipeline(
@@ -59,7 +71,7 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
         rtkTransport,
         new DeepgramSTT(this.env.DEEPGRAM_API_KEY),
         this.textProcessor,
-        new ElevenLabsTTS(this.env.ELEVENLABS_API_KEY, ttsVoiceId),
+        ttsComponent,
         rtkTransport,
       ],
       agentId,
