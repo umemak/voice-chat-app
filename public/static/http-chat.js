@@ -18,6 +18,8 @@ class HTTPVoiceChat {
     this.selectedLLMModel = '@cf/openai/gpt-oss-120b';
     this.selectedTTSProvider = 'cloudflare';
     this.selectedTTSModel = '@cf/deepgram/aura-2-en';
+    this.enableVideo = false;
+    this.avatarUrl = '';
 
     this.init();
   }
@@ -63,6 +65,26 @@ class HTTPVoiceChat {
     document.getElementById('http-tts-model').addEventListener('change', (e) => {
       this.selectedTTSModel = e.target.value;
     });
+
+    // Video toggle
+    const videoToggle = document.getElementById('enable-video');
+    if (videoToggle) {
+      videoToggle.addEventListener('change', (e) => {
+        this.enableVideo = e.target.checked;
+        const avatarSection = document.getElementById('avatar-url-section');
+        if (avatarSection) {
+          avatarSection.classList.toggle('hidden', !e.target.checked);
+        }
+      });
+    }
+
+    // Avatar URL
+    const avatarInput = document.getElementById('avatar-url');
+    if (avatarInput) {
+      avatarInput.addEventListener('input', (e) => {
+        this.avatarUrl = e.target.value;
+      });
+    }
 
     // Record button
     document.getElementById('record-btn').addEventListener('click', () => {
@@ -140,6 +162,8 @@ class HTTPVoiceChat {
           llmProvider: this.selectedLLMProvider,
           llmModel: this.selectedLLMModel,
           sessionId: this.sessionId,
+          enableVideo: this.enableVideo,
+          avatarUrl: this.avatarUrl || undefined,
         }),
       });
 
@@ -149,8 +173,8 @@ class HTTPVoiceChat {
         // Display user message
         this.addMessage('user', data.transcript);
 
-        // Display assistant message
-        this.addMessage('assistant', data.responseText);
+        // Display assistant message with optional video
+        this.addMessage('assistant', data.responseText, data.videoUrl);
 
         // Play audio response
         if (data.audioBase64) {
@@ -186,7 +210,7 @@ class HTTPVoiceChat {
     });
   }
 
-  addMessage(role, content) {
+  addMessage(role, content, videoUrl) {
     const messagesContainer = document.getElementById('messages-container');
     const messageDiv = document.createElement('div');
     
@@ -199,7 +223,27 @@ class HTTPVoiceChat {
       ? 'bg-blue-600 text-white px-4 py-2 rounded-lg max-w-md'
       : 'bg-gray-200 text-gray-800 px-4 py-2 rounded-lg max-w-md';
 
-    bubbleDiv.textContent = content;
+    // Add text content
+    const textDiv = document.createElement('div');
+    textDiv.textContent = content;
+    bubbleDiv.appendChild(textDiv);
+
+    // Add video player if available
+    if (videoUrl) {
+      const videoDiv = document.createElement('div');
+      videoDiv.className = 'mt-2';
+      videoDiv.innerHTML = `
+        <video controls class="w-full rounded" style="max-width: 300px;">
+          <source src="${videoUrl}" type="video/mp4">
+          お使いのブラウザは動画再生に対応していません。
+        </video>
+        <p class="text-xs mt-1 opacity-75">
+          <i class="fas fa-video mr-1"></i>D-ID リップシンク動画
+        </p>
+      `;
+      bubbleDiv.appendChild(videoDiv);
+    }
+
     messageDiv.appendChild(bubbleDiv);
     messagesContainer.appendChild(messageDiv);
 

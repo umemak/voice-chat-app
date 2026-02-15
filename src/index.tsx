@@ -385,6 +385,26 @@ app.get('/http-chat', (c) => {
                             </select>
                         </div>
 
+                        <!-- D-ID Video Settings -->
+                        <div class="mb-4 border-t pt-4">
+                            <label class="flex items-center mb-2">
+                                <input type="checkbox" id="enable-video" class="mr-2">
+                                <span class="text-sm font-medium">
+                                    <i class="fas fa-video mr-1"></i>
+                                    D-ID リップシンク動画を生成
+                                </span>
+                            </label>
+                            <div id="avatar-url-section" class="hidden">
+                                <input type="text" 
+                                       id="avatar-url" 
+                                       placeholder="アバター画像URL（任意）" 
+                                       class="w-full px-3 py-2 border rounded-lg text-sm">
+                                <p class="text-xs text-gray-500 mt-1">
+                                    未入力の場合はデフォルトアバターを使用
+                                </p>
+                            </div>
+                        </div>
+
                         <div class="flex space-x-2">
                             <button id="record-btn" 
                                     class="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold">

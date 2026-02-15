@@ -39,6 +39,7 @@ Cloudflare Workers AIとRealtime Agentsを活用したリアルタイム音声�
 - APIキー不要で動作確認可能
 - 実装がシンプル
 - セットアップが簡単
+- **D-IDリップシンク動画生成対応**（オプション）
 
 ## 🛠️ 技術スタック
 
@@ -85,6 +86,12 @@ Cloudflare Workers AIとRealtime Agentsを活用したリアルタイム音声�
 
 **ElevenLabs:**
 - ボイスクローン対応（Realtimeモード）
+
+#### Video（リップシンク動画）
+**D-ID:**
+- 音声からリアルなアバター動画生成
+- HTTPモードでオプション有効化可能
+- カスタムアバター画像対応
 
 ## 📦 プロジェクト構成
 

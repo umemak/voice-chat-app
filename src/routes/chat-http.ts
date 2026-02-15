@@ -10,6 +10,7 @@ import type { Bindings, STTProvider, LLMProvider, CloudflareSTTModel, Cloudflare
 import { OpenAIService } from '../services/openai';
 import { CloudflareLLMService } from '../services/cloudflare-llm';
 import { RAGService } from '../services/rag';
+import { DIDService } from '../services/did';
 
 const app = new Hono<{ Bindings: Bindings }>();
 
@@ -26,7 +27,9 @@ app.post('/process', async (c) => {
       sttModel = '@cf/openai/whisper-large-v3-turbo',
       llmProvider = 'cloudflare',
       llmModel = '@cf/openai/gpt-oss-120b',
-      sessionId 
+      sessionId,
+      enableVideo = false,
+      avatarUrl
     } = await c.req.json<{
       audio: string; // base64 encoded audio
       sttProvider?: STTProvider;
@@ -34,6 +37,8 @@ app.post('/process', async (c) => {
       llmProvider?: LLMProvider;
       llmModel?: CloudflareLLMModel;
       sessionId?: string;
+      enableVideo?: boolean; // Enable D-ID video generation
+      avatarUrl?: string; // Custom avatar image URL (optional)
     }>();
 
     if (!audio) {
@@ -79,9 +84,43 @@ app.post('/process', async (c) => {
     // Step 4: Text to Speech
     const audioResponse = await performCloudflareTTS(c.env.AI, responseText);
 
-    // Step 5: Save conversation (optional)
+    // Step 5: D-ID Video Generation (optional)
+    let videoUrl: string | undefined;
+    let videoId: string | undefined;
+    
+    if (enableVideo && c.env.DID_API_KEY) {
+      try {
+        console.log('[ChatHTTP] Generating D-ID video...');
+        
+        // Upload audio to R2 first (D-ID needs a public URL)
+        const audioKey = `audio/${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
+        await c.env.R2.put(audioKey, audioResponse, {
+          httpMetadata: {
+            contentType: 'audio/mpeg'
+          }
+        });
+        
+        // Create a temporary signed URL for D-ID (valid for 1 hour)
+        // Note: You need to set up R2 public access or use a signed URL
+        // For now, we'll use a workaround: create an endpoint to serve R2 files
+        const audioPublicUrl = `${new URL(c.req.url).origin}/api/r2-proxy/${audioKey}`;
+        
+        const didService = new DIDService(c.env.DID_API_KEY);
+        videoId = await didService.createTalk(audioPublicUrl, avatarUrl);
+        console.log(`[ChatHTTP] D-ID Talk created: ${videoId}`);
+        
+        // Wait for video generation (with 60 second timeout)
+        videoUrl = await didService.waitForTalk(videoId, 60);
+        console.log(`[ChatHTTP] Video ready: ${videoUrl}`);
+      } catch (error) {
+        console.error('[ChatHTTP] D-ID video generation failed:', error);
+        // Don't fail the whole request if video generation fails
+      }
+    }
+
+    // Step 6: Save conversation (optional)
     if (sessionId) {
-      await saveConversation(c.env, sessionId, transcript, responseText);
+      await saveConversation(c.env, sessionId, transcript, responseText, videoUrl);
     }
 
     // Return response
@@ -90,7 +129,9 @@ app.post('/process', async (c) => {
       transcript,
       responseText,
       audioBase64: Buffer.from(audioResponse).toString('base64'),
-      sessionId: sessionId || `session_${Date.now()}`
+      sessionId: sessionId || `session_${Date.now()}`,
+      videoUrl,
+      videoId
     });
 
   } catch (error) {
@@ -171,7 +212,8 @@ async function saveConversation(
   env: Bindings,
   sessionId: string,
   userText: string,
-  assistantText: string
+  assistantText: string,
+  videoUrl?: string
 ): Promise<void> {
   try {
     // Get or create conversation
@@ -198,14 +240,49 @@ async function saveConversation(
       .run();
 
     await env.DB.prepare(
-      'INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)'
+      'INSERT INTO messages (conversation_id, role, content, video_url) VALUES (?, ?, ?, ?)'
     )
-      .bind(conversation.id, 'assistant', assistantText)
+      .bind(conversation.id, 'assistant', assistantText, videoUrl || null)
       .run();
   } catch (error) {
     console.error('[SaveConversation] Error:', error);
     // Don't throw - this is optional
   }
 }
+
+/**
+ * R2 Proxy endpoint - Serve audio files from R2 with public access
+ * GET /api/r2-proxy/:key
+ */
+app.get('/r2-proxy/*', async (c) => {
+  try {
+    const key = c.req.param('*');
+    
+    if (!key) {
+      return c.json({ error: 'File key required' }, 400);
+    }
+
+    const object = await c.env.R2.get(key);
+
+    if (!object) {
+      return c.json({ error: 'File not found' }, 404);
+    }
+
+    return new Response(object.body, {
+      headers: {
+        'Content-Type': object.httpMetadata?.contentType || 'audio/mpeg',
+        'Cache-Control': 'public, max-age=3600',
+      },
+    });
+  } catch (error) {
+    console.error('[R2Proxy] Error:', error);
+    return c.json(
+      { 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      },
+      500
+    );
+  }
+});
 
 export default app;
