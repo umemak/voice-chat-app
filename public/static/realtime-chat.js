@@ -13,6 +13,8 @@ class RealtimeVoiceChat {
     this.selectedVoiceId = null;
     this.selectedSTTProvider = 'cloudflare'; // Default to Cloudflare STT
     this.selectedCloudflareSTTModel = '@cf/openai/whisper-large-v3-turbo'; // Default STT model
+    this.selectedLLMProvider = 'cloudflare'; // Default to Cloudflare LLM
+    this.selectedCloudflareLLMModel = '@cf/openai/gpt-oss-120b'; // Default LLM model
     this.selectedTTSProvider = 'cloudflare'; // Default to Cloudflare TTS
     this.selectedCloudflareTTSModel = '@cf/deepgram/aura-2-en'; // Default TTS model
     this.isConnected = false;
@@ -75,6 +77,24 @@ class RealtimeVoiceChat {
     // Cloudflare STT model selection
     document.getElementById('cloudflare-stt-model-select').addEventListener('change', (e) => {
       this.selectedCloudflareSTTModel = e.target.value;
+    });
+
+    // LLM provider selection
+    document.getElementById('llm-provider-select').addEventListener('change', (e) => {
+      this.selectedLLMProvider = e.target.value;
+      
+      // Show/hide Cloudflare LLM model section
+      const cloudflareLLMModelSection = document.getElementById('cloudflare-llm-model-section');
+      if (this.selectedLLMProvider === 'cloudflare') {
+        cloudflareLLMModelSection.classList.remove('hidden');
+      } else {
+        cloudflareLLMModelSection.classList.add('hidden');
+      }
+    });
+
+    // Cloudflare LLM model selection
+    document.getElementById('cloudflare-llm-model-select').addEventListener('change', (e) => {
+      this.selectedCloudflareLLMModel = e.target.value;
     });
 
     // TTS provider selection
@@ -210,12 +230,18 @@ class RealtimeVoiceChat {
         meetingId: this.meetingId,
         authToken: this.authToken,
         sttProvider: this.selectedSTTProvider,
+        llmProvider: this.selectedLLMProvider,
         ttsProvider: this.selectedTTSProvider,
       };
 
       // Add STT provider-specific options
       if (this.selectedSTTProvider === 'cloudflare') {
         requestBody.cloudflareSTTModel = this.selectedCloudflareSTTModel;
+      }
+
+      // Add LLM provider-specific options
+      if (this.selectedLLMProvider === 'cloudflare') {
+        requestBody.cloudflareLLMModel = this.selectedCloudflareLLMModel;
       }
 
       // Add TTS provider-specific options
@@ -249,6 +275,14 @@ class RealtimeVoiceChat {
           sttInfo = 'Deepgram';
         }
 
+        let llmInfo = '';
+        if (data.llmProvider === 'cloudflare') {
+          const llmModelName = this.getLLMModelDisplayName(data.cloudflareLLMModel);
+          llmInfo = `Cloudflare AI (${llmModelName})`;
+        } else {
+          llmInfo = 'OpenAI GPT-4o-mini';
+        }
+
         let ttsInfo = '';
         if (data.ttsProvider === 'cloudflare') {
           const ttsModelName = this.getTTSModelDisplayName(data.cloudflareTTSModel);
@@ -257,10 +291,10 @@ class RealtimeVoiceChat {
           ttsInfo = 'ElevenLabs';
         }
         
-        this.updateStatus(`接続成功 - AIエージェント起動（STT: ${sttInfo}, TTS: ${ttsInfo}）`, 'connected');
+        this.updateStatus(`接続成功 - AIエージェント起動（STT: ${sttInfo}, LLM: ${llmInfo}, TTS: ${ttsInfo}）`, 'connected');
 
         // Show success message
-        alert(`AIエージェントが起動しました！\n\nSTT: ${sttInfo}\nTTS: ${ttsInfo}\n\nRealtimeKitのミーティングに参加して話しかけてください。`);
+        alert(`AIエージェントが起動しました！\n\nSTT: ${sttInfo}\nLLM: ${llmInfo}\nTTS: ${ttsInfo}\n\nRealtimeKitのミーティングに参加して話しかけてください。`);
       } else {
         throw new Error(data.error || 'Agent initialization failed');
       }
@@ -278,6 +312,17 @@ class RealtimeVoiceChat {
       '@cf/deepgram/nova-3': 'Nova 3',
       '@cf/deepgram/flux': 'Flux',
       '@cf/openai/whisper-tiny-en': 'Whisper Tiny EN',
+    };
+    return modelNames[modelId] || modelId;
+  }
+
+  getLLMModelDisplayName(modelId) {
+    const modelNames = {
+      '@cf/openai/gpt-oss-120b': 'GPT OSS 120B',
+      '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 'Llama 3.3 70B',
+      '@cf/qwen/qwen2.5-72b-instruct-fp8': 'Qwen 2.5 72B',
+      '@cf/meta/llama-3.1-8b-instruct-fast': 'Llama 3.1 8B',
+      '@cf/google/gemma-2-9b-it-lora': 'Gemma 2 9B',
     };
     return modelNames[modelId] || modelId;
   }

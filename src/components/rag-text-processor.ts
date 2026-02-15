@@ -7,21 +7,40 @@
  */
 
 import { TextComponent } from '@cloudflare/realtime-agents';
-import type { Bindings } from '../types';
+import type { Bindings, LLMProvider, CloudflareLLMModel } from '../types';
 import { RAGService } from '../services/rag';
 import { OpenAIService } from '../services/openai';
+import { CloudflareLLMService } from '../services/cloudflare-llm';
 
 export class RAGTextProcessor extends TextComponent {
   private env: Bindings;
   private ragService: RAGService;
-  private openaiService: OpenAIService;
+  private openaiService?: OpenAIService;
+  private cloudflareLLMService?: CloudflareLLMService;
+  private llmProvider: LLMProvider;
   private conversationHistory: Array<{ role: string; content: string }> = [];
 
-  constructor(env: Bindings) {
+  constructor(
+    env: Bindings,
+    llmProvider: LLMProvider = 'openai',
+    cloudflareLLMModel?: CloudflareLLMModel
+  ) {
     super();
     this.env = env;
     this.ragService = new RAGService(env);
-    this.openaiService = new OpenAIService(env.OPENAI_API_KEY);
+    this.llmProvider = llmProvider;
+
+    // Initialize appropriate LLM service based on provider
+    if (llmProvider === 'cloudflare') {
+      this.cloudflareLLMService = new CloudflareLLMService(
+        env.AI,
+        cloudflareLLMModel || '@cf/openai/gpt-oss-120b'
+      );
+      console.log(`[RAG] Using Cloudflare Workers AI LLM: ${cloudflareLLMModel || '@cf/openai/gpt-oss-120b'}`);
+    } else {
+      this.openaiService = new OpenAIService(env.OPENAI_API_KEY);
+      console.log('[RAG] Using OpenAI GPT-4o-mini');
+    }
   }
 
   /**
@@ -43,10 +62,20 @@ export class RAGTextProcessor extends TextComponent {
       console.log(`[RAG] Found context: ${ragContext ? 'Yes' : 'No'}`);
 
       // Step 2: Generate response using LLM with RAG context
-      const response = await this.openaiService.chatCompletion(
-        this.conversationHistory,
-        ragContext
-      );
+      let response: string;
+      if (this.llmProvider === 'cloudflare' && this.cloudflareLLMService) {
+        response = await this.cloudflareLLMService.chatCompletion(
+          this.conversationHistory,
+          ragContext
+        );
+      } else if (this.openaiService) {
+        response = await this.openaiService.chatCompletion(
+          this.conversationHistory,
+          ragContext
+        );
+      } else {
+        throw new Error('No LLM service available');
+      }
 
       console.log(`[RAG] AI response: ${response}`);
 

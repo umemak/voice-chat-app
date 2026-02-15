@@ -12,7 +12,15 @@ import {
   ElevenLabsTTS,
 } from '@cloudflare/realtime-agents';
 import type { DurableObjectState } from '@cloudflare/workers-types';
-import type { Bindings, TTSProvider, CloudflareTTSModel, STTProvider, CloudflareSTTModel } from '../types';
+import type { 
+  Bindings, 
+  TTSProvider, 
+  CloudflareTTSModel, 
+  STTProvider, 
+  CloudflareSTTModel,
+  LLMProvider,
+  CloudflareLLMModel
+} from '../types';
 import { RAGTextProcessor } from '../components/rag-text-processor';
 import { CloudflareTTS } from '../components/cloudflare-tts';
 import { CloudflareSTT } from '../components/cloudflare-stt';
@@ -38,6 +46,8 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
    * @param cloudflareTTSModel - Cloudflare TTS model to use (if provider is 'cloudflare')
    * @param sttProvider - STT provider to use ('cloudflare' or 'deepgram')
    * @param cloudflareSTTModel - Cloudflare STT model to use (if provider is 'cloudflare')
+   * @param llmProvider - LLM provider to use ('cloudflare' or 'openai')
+   * @param cloudflareLLMModel - Cloudflare LLM model to use (if provider is 'cloudflare')
    */
   async init(
     agentId: string,
@@ -50,14 +60,17 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
     ttsProvider: TTSProvider = 'cloudflare',
     cloudflareTTSModel: CloudflareTTSModel = '@cf/deepgram/aura-2-en',
     sttProvider: STTProvider = 'cloudflare',
-    cloudflareSTTModel: CloudflareSTTModel = '@cf/openai/whisper-large-v3-turbo'
+    cloudflareSTTModel: CloudflareSTTModel = '@cf/openai/whisper-large-v3-turbo',
+    llmProvider: LLMProvider = 'cloudflare',
+    cloudflareLLMModel: CloudflareLLMModel = '@cf/openai/gpt-oss-120b'
   ) {
     console.log(`[Agent] Initializing agent ${agentId} for meeting ${meetingId}`);
     console.log(`[Agent] STT Provider: ${sttProvider}`);
+    console.log(`[Agent] LLM Provider: ${llmProvider}`);
     console.log(`[Agent] TTS Provider: ${ttsProvider}`);
 
-    // Create RAG text processor
-    this.textProcessor = new RAGTextProcessor(this.env);
+    // Create RAG text processor with LLM provider
+    this.textProcessor = new RAGTextProcessor(this.env, llmProvider, cloudflareLLMModel);
 
     // Create RealtimeKit transport for audio I/O
     const rtkTransport = new RealtimeKitTransport(meetingId, authToken);

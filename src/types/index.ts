@@ -19,6 +19,25 @@ export type TTSProvider = 'cloudflare' | 'elevenlabs';
 // STT Provider types
 export type STTProvider = 'cloudflare' | 'deepgram';
 
+// LLM Provider types
+export type LLMProvider = 'cloudflare' | 'openai';
+
+// Cloudflare Workers AI LLM Models
+export type CloudflareLLMModel =
+  | '@cf/openai/gpt-oss-120b'                    // GPT OSS 120B (latest, high quality)
+  | '@cf/meta/llama-3.3-70b-instruct-fp8-fast'   // Llama 3.3 70B (high quality, Japanese)
+  | '@cf/meta/llama-3.1-8b-instruct-fast'        // Llama 3.1 8B (fast, lightweight)
+  | '@cf/qwen/qwen2.5-72b-instruct-fp8'          // Qwen 2.5 72B (excellent Japanese)
+  | '@cf/google/gemma-2-9b-it-lora';             // Gemma 2 9B
+
+export interface CloudflareLLMModelInfo {
+  id: CloudflareLLMModel;
+  name: string;
+  description: string;
+  japaneseSupport: boolean;
+  contextLength: number;
+}
+
 // Cloudflare Workers AI TTS Models
 export type CloudflareTTSModel = 
   | '@cf/deepgram/aura-1'           // English (default)
@@ -61,6 +80,8 @@ export interface AgentInitOptions {
   cloudflareTTSModel?: CloudflareTTSModel;
   sttProvider?: STTProvider;
   cloudflareSTTModel?: CloudflareSTTModel;
+  llmProvider?: LLMProvider;
+  cloudflareLLMModel?: CloudflareLLMModel;
 }
 
 // Document types

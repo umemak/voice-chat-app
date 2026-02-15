@@ -26,7 +26,9 @@ app.post('/api/agent/init', async (c) => {
       ttsProvider, 
       cloudflareTTSModel,
       sttProvider,
-      cloudflareSTTModel
+      cloudflareSTTModel,
+      llmProvider,
+      cloudflareLLMModel
     } = await c.req.json<{
       meetingId: string;
       authToken: string;
@@ -35,6 +37,8 @@ app.post('/api/agent/init', async (c) => {
       cloudflareTTSModel?: string;
       sttProvider?: 'cloudflare' | 'deepgram';
       cloudflareSTTModel?: string;
+      llmProvider?: 'cloudflare' | 'openai';
+      cloudflareLLMModel?: string;
     }>();
 
     if (!meetingId || !authToken) {
@@ -57,7 +61,9 @@ app.post('/api/agent/init', async (c) => {
       ttsProvider || 'cloudflare',
       cloudflareTTSModel || '@cf/deepgram/aura-2-en',
       sttProvider || 'cloudflare',
-      cloudflareSTTModel || '@cf/openai/whisper-large-v3-turbo'
+      cloudflareSTTModel || '@cf/openai/whisper-large-v3-turbo',
+      llmProvider || 'cloudflare',
+      cloudflareLLMModel || '@cf/openai/gpt-oss-120b'
     );
 
     return c.json({ 
@@ -65,6 +71,8 @@ app.post('/api/agent/init', async (c) => {
       agentId, 
       sttProvider: sttProvider || 'cloudflare',
       cloudflareSTTModel: cloudflareSTTModel || '@cf/openai/whisper-large-v3-turbo',
+      llmProvider: llmProvider || 'cloudflare',
+      cloudflareLLMModel: cloudflareLLMModel || '@cf/openai/gpt-oss-120b',
       ttsProvider: ttsProvider || 'cloudflare',
       cloudflareTTSModel: cloudflareTTSModel || '@cf/deepgram/aura-2-en'
     });
@@ -175,6 +183,28 @@ app.get('/', (c) => {
                             </select>
                             <p class="text-xs text-gray-500 mt-1">
                               🇯🇵 日本語対応: Whisper系、Nova 3
+                            </p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-2">LLMプロバイダー（AI応答生成）</label>
+                            <select id="llm-provider-select" class="w-full px-3 py-2 border rounded-lg mb-3">
+                              <option value="cloudflare">Cloudflare Workers AI（無料・APIキー不要）</option>
+                              <option value="openai">OpenAI GPT-4o-mini（高品質・要APIキー）</option>
+                            </select>
+                        </div>
+
+                        <div id="cloudflare-llm-model-section" class="mb-4">
+                            <label class="block text-sm font-medium mb-2">Cloudflare LLMモデル</label>
+                            <select id="cloudflare-llm-model-select" class="w-full px-3 py-2 border rounded-lg">
+                              <option value="@cf/openai/gpt-oss-120b">GPT OSS 120B（最新・推奨・日本語対応）</option>
+                              <option value="@cf/meta/llama-3.3-70b-instruct-fp8-fast">Llama 3.3 70B（高品質・日本語対応）</option>
+                              <option value="@cf/qwen/qwen2.5-72b-instruct-fp8">Qwen 2.5 72B（日本語特化）</option>
+                              <option value="@cf/meta/llama-3.1-8b-instruct-fast">Llama 3.1 8B（軽量・高速）</option>
+                              <option value="@cf/google/gemma-2-9b-it-lora">Gemma 2 9B（Google製）</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">
+                              🇯🇵 すべて日本語対応
                             </p>
                         </div>
 
