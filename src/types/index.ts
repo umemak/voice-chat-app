@@ -16,6 +16,20 @@ export type Bindings = {
 // TTS Provider types
 export type TTSProvider = 'cloudflare' | 'elevenlabs';
 
+// Cloudflare Workers AI TTS Models
+export type CloudflareTTSModel = 
+  | '@cf/deepgram/aura-1'           // English (default)
+  | '@cf/deepgram/aura-2-en'        // English (v2)
+  | '@cf/deepgram/aura-2-es'        // Spanish
+  | '@cf/myshell-ai/melotts';       // MeloTTS (multilingual)
+
+export interface CloudflareTTSModelInfo {
+  id: CloudflareTTSModel;
+  name: string;
+  language: string;
+  description: string;
+}
+
 export interface AgentInitOptions {
   agentId: string;
   meetingId: string;
@@ -25,6 +39,7 @@ export interface AgentInitOptions {
   apiToken: string;
   voiceId?: string;
   ttsProvider?: TTSProvider;
+  cloudflareTTSModel?: CloudflareTTSModel;
 }
 
 // Document types

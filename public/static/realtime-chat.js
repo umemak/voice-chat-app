@@ -12,6 +12,7 @@ class RealtimeVoiceChat {
     this.agentId = null;
     this.selectedVoiceId = null;
     this.selectedTTSProvider = 'cloudflare'; // Default to Cloudflare TTS
+    this.selectedCloudflareTTSModel = '@cf/deepgram/aura-2-en'; // Default model
     this.isConnected = false;
 
     this.init();
@@ -60,13 +61,22 @@ class RealtimeVoiceChat {
     document.getElementById('tts-provider-select').addEventListener('change', (e) => {
       this.selectedTTSProvider = e.target.value;
       
-      // Show/hide voice profile section based on TTS provider
+      // Show/hide sections based on TTS provider
+      const cloudflareModelSection = document.getElementById('cloudflare-model-section');
       const voiceSection = document.getElementById('voice-profile-section');
+      
       if (this.selectedTTSProvider === 'elevenlabs') {
+        cloudflareModelSection.classList.add('hidden');
         voiceSection.classList.remove('hidden');
       } else {
+        cloudflareModelSection.classList.remove('hidden');
         voiceSection.classList.add('hidden');
       }
+    });
+
+    // Cloudflare TTS model selection
+    document.getElementById('cloudflare-model-select').addEventListener('change', (e) => {
+      this.selectedCloudflareTTSModel = e.target.value;
     });
   }
 
@@ -182,9 +192,11 @@ class RealtimeVoiceChat {
         ttsProvider: this.selectedTTSProvider,
       };
 
-      // Add voiceId only if ElevenLabs is selected
+      // Add provider-specific options
       if (this.selectedTTSProvider === 'elevenlabs' && this.selectedVoiceId) {
         requestBody.voiceId = this.selectedVoiceId;
+      } else if (this.selectedTTSProvider === 'cloudflare') {
+        requestBody.cloudflareTTSModel = this.selectedCloudflareTTSModel;
       }
 
       // Call agent init API
@@ -202,14 +214,18 @@ class RealtimeVoiceChat {
         this.agentId = data.agentId;
         this.isConnected = true;
         
-        const providerName = data.ttsProvider === 'cloudflare' 
-          ? 'Cloudflare Workers AI' 
-          : 'ElevenLabs';
+        let providerInfo = '';
+        if (data.ttsProvider === 'cloudflare') {
+          const modelName = this.getModelDisplayName(data.cloudflareTTSModel);
+          providerInfo = `Cloudflare Workers AI (${modelName})`;
+        } else {
+          providerInfo = 'ElevenLabs';
+        }
         
-        this.updateStatus(`接続成功 - AIエージェントが会話に参加しました（TTS: ${providerName}）`, 'connected');
+        this.updateStatus(`接続成功 - AIエージェントが会話に参加しました（TTS: ${providerInfo}）`, 'connected');
 
         // Show success message
-        alert(`AIエージェントが起動しました！\nTTSプロバイダー: ${providerName}\n\nRealtimeKitのミーティングに参加して話しかけてください。`);
+        alert(`AIエージェントが起動しました！\nTTS: ${providerInfo}\n\nRealtimeKitのミーティングに参加して話しかけてください。`);
       } else {
         throw new Error(data.error || 'Agent initialization failed');
       }
@@ -218,6 +234,16 @@ class RealtimeVoiceChat {
       this.updateStatus('起動エラー', 'error');
       alert(`エージェント起動エラー: ${error.message}`);
     }
+  }
+
+  getModelDisplayName(modelId) {
+    const modelNames = {
+      '@cf/deepgram/aura-2-en': 'Aura 2 EN',
+      '@cf/deepgram/aura-1': 'Aura 1 EN',
+      '@cf/deepgram/aura-2-es': 'Aura 2 ES',
+      '@cf/myshell-ai/melotts': 'MeloTTS',
+    };
+    return modelNames[modelId] || modelId;
   }
 
   async disconnect() {

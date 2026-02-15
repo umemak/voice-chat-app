@@ -12,7 +12,7 @@ import {
   ElevenLabsTTS,
 } from '@cloudflare/realtime-agents';
 import type { DurableObjectState } from '@cloudflare/workers-types';
-import type { Bindings, TTSProvider } from '../types';
+import type { Bindings, TTSProvider, CloudflareTTSModel } from '../types';
 import { RAGTextProcessor } from '../components/rag-text-processor';
 import { CloudflareTTS } from '../components/cloudflare-tts';
 
@@ -34,6 +34,7 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
    * @param apiToken - Cloudflare API token
    * @param voiceId - Optional ElevenLabs voice ID for custom voice
    * @param ttsProvider - TTS provider to use ('cloudflare' or 'elevenlabs')
+   * @param cloudflareTTSModel - Cloudflare TTS model to use (if provider is 'cloudflare')
    */
   async init(
     agentId: string,
@@ -43,7 +44,8 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
     accountId: string,
     apiToken: string,
     voiceId?: string,
-    ttsProvider: TTSProvider = 'cloudflare'
+    ttsProvider: TTSProvider = 'cloudflare',
+    cloudflareTTSModel: CloudflareTTSModel = '@cf/deepgram/aura-2-en'
   ) {
     console.log(`[Agent] Initializing agent ${agentId} for meeting ${meetingId}`);
     console.log(`[Agent] TTS Provider: ${ttsProvider}`);
@@ -57,8 +59,8 @@ export class VoiceChatAgent extends RealtimeAgent<Bindings> {
     // Select TTS component based on provider
     let ttsComponent;
     if (ttsProvider === 'cloudflare') {
-      console.log('[Agent] Using Cloudflare Workers AI TTS');
-      ttsComponent = new CloudflareTTS(this.env.AI);
+      console.log(`[Agent] Using Cloudflare Workers AI TTS: ${cloudflareTTSModel}`);
+      ttsComponent = new CloudflareTTS(this.env.AI, cloudflareTTSModel);
     } else {
       console.log('[Agent] Using ElevenLabs TTS');
       const ttsVoiceId = voiceId || await this.getDefaultVoiceId();

@@ -19,11 +19,12 @@ app.route('/api/admin', adminRoutes)
 // Realtime Agent routes
 app.post('/api/agent/init', async (c) => {
   try {
-    const { meetingId, authToken, voiceId, ttsProvider } = await c.req.json<{
+    const { meetingId, authToken, voiceId, ttsProvider, cloudflareTTSModel } = await c.req.json<{
       meetingId: string;
       authToken: string;
       voiceId?: string;
       ttsProvider?: 'cloudflare' | 'elevenlabs';
+      cloudflareTTSModel?: string;
     }>();
 
     if (!meetingId || !authToken) {
@@ -43,10 +44,16 @@ app.post('/api/agent/init', async (c) => {
       c.env.ACCOUNT_ID,
       c.env.API_TOKEN,
       voiceId,
-      ttsProvider || 'cloudflare' // Default to Cloudflare TTS
+      ttsProvider || 'cloudflare',
+      cloudflareTTSModel || '@cf/deepgram/aura-2-en'
     );
 
-    return c.json({ success: true, agentId, ttsProvider: ttsProvider || 'cloudflare' });
+    return c.json({ 
+      success: true, 
+      agentId, 
+      ttsProvider: ttsProvider || 'cloudflare',
+      cloudflareTTSModel: cloudflareTTSModel || '@cf/deepgram/aura-2-en'
+    });
   } catch (error) {
     console.error('Agent init error:', error);
     return c.json(
@@ -141,6 +148,19 @@ app.get('/', (c) => {
                               <option value="cloudflare">Cloudflare Workers AI（無料・APIキー不要）</option>
                               <option value="elevenlabs">ElevenLabs（高品質・ボイスクローン対応）</option>
                             </select>
+                        </div>
+
+                        <div id="cloudflare-model-section" class="mb-4">
+                            <label class="block text-sm font-medium mb-2">Cloudflare TTSモデル</label>
+                            <select id="cloudflare-model-select" class="w-full px-3 py-2 border rounded-lg">
+                              <option value="@cf/deepgram/aura-2-en">Deepgram Aura 2 - English（推奨）</option>
+                              <option value="@cf/deepgram/aura-1">Deepgram Aura 1 - English</option>
+                              <option value="@cf/deepgram/aura-2-es">Deepgram Aura 2 - Spanish</option>
+                              <option value="@cf/myshell-ai/melotts">MeloTTS - Multilingual</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">
+                              ※ 日本語での質問でも、英語で応答されます
+                            </p>
                         </div>
 
                         <div id="voice-profile-section" class="mb-4 hidden">

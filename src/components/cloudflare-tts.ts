@@ -2,16 +2,20 @@
  * Cloudflare TTS Component for Realtime Agents
  * - Text-to-Speech using Cloudflare Workers AI
  * - Compatible with Realtime Agents pipeline
+ * - Supports multiple TTS models
  */
 
 import { TTSComponent } from '@cloudflare/realtime-agents';
+import type { CloudflareTTSModel } from '../types';
 
 export class CloudflareTTS extends TTSComponent {
   private ai: any;
+  private model: CloudflareTTSModel;
 
-  constructor(ai: any) {
+  constructor(ai: any, model: CloudflareTTSModel = '@cf/deepgram/aura-2-en') {
     super();
     this.ai = ai;
+    this.model = model;
   }
 
   /**
@@ -20,9 +24,10 @@ export class CloudflareTTS extends TTSComponent {
   async textToSpeech(text: string): Promise<ArrayBuffer> {
     try {
       console.log(`[CloudflareTTS] Generating speech for: ${text.substring(0, 50)}...`);
+      console.log(`[CloudflareTTS] Using model: ${this.model}`);
 
-      // Use Deepgram Aura via Workers AI
-      const response = await this.ai.run('@cf/deepgram/aura-1', {
+      // Call Workers AI TTS
+      const response = await this.ai.run(this.model, {
         text: text,
       });
 
@@ -44,3 +49,4 @@ export class CloudflareTTS extends TTSComponent {
     }
   }
 }
+
