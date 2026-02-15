@@ -10,5 +10,13 @@ export default defineConfig({
       adapter,
       entry: 'src/index.tsx'
     })
-  ]
+  ],
+  build: {
+    rollupOptions: {
+      external: ['cloudflare:workers']
+    }
+  },
+  ssr: {
+    external: ['cloudflare:workers']
+  }
 })
