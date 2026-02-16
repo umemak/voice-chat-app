@@ -84,43 +84,52 @@ app.post('/process', async (c) => {
     // Step 4: Text to Speech
     const audioResponse = await performCloudflareTTS(c.env.AI, responseText);
 
-    // Step 5: D-ID Video Generation (optional)
+    // Step 5: D-ID Video Generation or Static Image (optional)
     let videoUrl: string | undefined;
     let videoId: string | undefined;
+    let staticImageUrl: string | undefined;
     
-    if (enableVideo && c.env.DID_API_KEY) {
-      try {
-        console.log('[ChatHTTP] Generating D-ID video...');
-        
-        // Upload audio to R2 first (D-ID needs a public URL)
-        const audioKey = `audio/${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
-        await c.env.R2.put(audioKey, audioResponse, {
-          httpMetadata: {
-            contentType: 'audio/mpeg'
-          }
-        });
-        
-        // Create a temporary signed URL for D-ID (valid for 1 hour)
-        // Note: You need to set up R2 public access or use a signed URL
-        // For now, we'll use a workaround: create an endpoint to serve R2 files
-        const audioPublicUrl = `${new URL(c.req.url).origin}/api/r2-proxy/${audioKey}`;
-        
-        const didService = new DIDService(c.env.DID_API_KEY);
-        videoId = await didService.createTalk(audioPublicUrl, avatarUrl);
-        console.log(`[ChatHTTP] D-ID Talk created: ${videoId}`);
-        
-        // Wait for video generation (with 60 second timeout)
-        videoUrl = await didService.waitForTalk(videoId, 60);
-        console.log(`[ChatHTTP] Video ready: ${videoUrl}`);
-      } catch (error) {
-        console.error('[ChatHTTP] D-ID video generation failed:', error);
-        // Don't fail the whole request if video generation fails
+    if (enableVideo) {
+      if (c.env.DID_API_KEY) {
+        // Generate video with D-ID
+        try {
+          console.log('[ChatHTTP] Generating D-ID video...');
+          
+          // Upload audio to R2 first (D-ID needs a public URL)
+          const audioKey = `audio/${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
+          await c.env.R2.put(audioKey, audioResponse, {
+            httpMetadata: {
+              contentType: 'audio/mpeg'
+            }
+          });
+          
+          // Create a temporary signed URL for D-ID (valid for 1 hour)
+          // Note: You need to set up R2 public access or use a signed URL
+          // For now, we'll use a workaround: create an endpoint to serve R2 files
+          const audioPublicUrl = `${new URL(c.req.url).origin}/api/r2-proxy/${audioKey}`;
+          
+          const didService = new DIDService(c.env.DID_API_KEY);
+          videoId = await didService.createTalk(audioPublicUrl, avatarUrl);
+          console.log(`[ChatHTTP] D-ID Talk created: ${videoId}`);
+          
+          // Wait for video generation (with 60 second timeout)
+          videoUrl = await didService.waitForTalk(videoId, 60);
+          console.log(`[ChatHTTP] Video ready: ${videoUrl}`);
+        } catch (error) {
+          console.error('[ChatHTTP] D-ID video generation failed:', error);
+          // Fallback to static image
+          staticImageUrl = avatarUrl || 'https://d-id-public-bucket.s3.us-west-2.amazonaws.com/alice.jpg';
+        }
+      } else {
+        // No D-ID API key - use static image
+        console.log('[ChatHTTP] D-ID API key not configured, using static image');
+        staticImageUrl = avatarUrl || 'https://d-id-public-bucket.s3.us-west-2.amazonaws.com/alice.jpg';
       }
     }
 
     // Step 6: Save conversation (optional)
     if (sessionId) {
-      await saveConversation(c.env, sessionId, transcript, responseText, videoUrl);
+      await saveConversation(c.env, sessionId, transcript, responseText, videoUrl, staticImageUrl);
     }
 
     // Return response
@@ -131,7 +140,8 @@ app.post('/process', async (c) => {
       audioBase64: Buffer.from(audioResponse).toString('base64'),
       sessionId: sessionId || `session_${Date.now()}`,
       videoUrl,
-      videoId
+      videoId,
+      staticImageUrl
     });
 
   } catch (error) {
@@ -213,7 +223,8 @@ async function saveConversation(
   sessionId: string,
   userText: string,
   assistantText: string,
-  videoUrl?: string
+  videoUrl?: string,
+  staticImageUrl?: string
 ): Promise<void> {
   try {
     // Get or create conversation
@@ -239,10 +250,12 @@ async function saveConversation(
       .bind(conversation.id, 'user', userText)
       .run();
 
+    // Store either video URL or static image URL
+    const mediaUrl = videoUrl || staticImageUrl;
     await env.DB.prepare(
       'INSERT INTO messages (conversation_id, role, content, video_url) VALUES (?, ?, ?, ?)'
     )
-      .bind(conversation.id, 'assistant', assistantText, videoUrl || null)
+      .bind(conversation.id, 'assistant', assistantText, mediaUrl || null)
       .run();
   } catch (error) {
     console.error('[SaveConversation] Error:', error);

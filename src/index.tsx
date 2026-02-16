@@ -442,6 +442,7 @@ app.get('/http-chat', (c) => {
                             <li>Cloudflare Workers AIのみで動作可能</li>
                             <li>ターンベース（順番に話す）</li>
                             <li>リアルタイム性はRealtimeモードより劣る</li>
+                            <li><strong>D-ID連携:</strong> APIキー設定時は動画生成、未設定時は静止画表示</li>
                         </ul>
                     </div>
                 </div>

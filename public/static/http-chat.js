@@ -173,8 +173,8 @@ class HTTPVoiceChat {
         // Display user message
         this.addMessage('user', data.transcript);
 
-        // Display assistant message with optional video
-        this.addMessage('assistant', data.responseText, data.videoUrl);
+        // Display assistant message with optional video or static image
+        this.addMessage('assistant', data.responseText, data.videoUrl, data.staticImageUrl);
 
         // Play audio response
         if (data.audioBase64) {
@@ -210,7 +210,7 @@ class HTTPVoiceChat {
     });
   }
 
-  addMessage(role, content, videoUrl) {
+  addMessage(role, content, videoUrl, staticImageUrl) {
     const messagesContainer = document.getElementById('messages-container');
     const messageDiv = document.createElement('div');
     
@@ -242,6 +242,17 @@ class HTTPVoiceChat {
         </p>
       `;
       bubbleDiv.appendChild(videoDiv);
+    } else if (staticImageUrl) {
+      // Show static image if video is not available
+      const imageDiv = document.createElement('div');
+      imageDiv.className = 'mt-2';
+      imageDiv.innerHTML = `
+        <img src="${staticImageUrl}" alt="Avatar" class="w-full rounded" style="max-width: 300px;">
+        <p class="text-xs mt-1 opacity-75">
+          <i class="fas fa-image mr-1"></i>アバター画像（D-ID APIキー未設定）
+        </p>
+      `;
+      bubbleDiv.appendChild(imageDiv);
     }
 
     messageDiv.appendChild(bubbleDiv);
